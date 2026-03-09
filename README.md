@@ -1,5 +1,6 @@
 # EmpireRising
-# Nu primesc notă pentru că nu am pus titlu și descriere
+Fac un joc de strategie medievala asemanator jocului "Age of Conquest". Jucatorul va putea crea unitati folosind aut si sa se lupte cu alte
+unitati inamice cuerind zone de pe harta.
 
 ### Folosiți template-ul corespunzător grupei voastre!
 
