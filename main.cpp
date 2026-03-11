@@ -301,6 +301,14 @@ int main() {
     std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
 
     // luptă în prima zonă (fără const_cast)
+    
+    // Folosim getPlayers() pentru a afișa numele jucătorilor (evităm warning pentru funcție nefolosită)
+    std::cout << "Players in game:\n";
+    for (const auto& pl : game.getPlayers()) {
+        std::cout << "  - " << pl.getName() << " (gold: " << pl.getGold() << ")\n";
+    }
+    std::cout << '\n';
+    
     game.battle(game.getZones()[0]);
 
     // mutăm o unitate (dacă mai există) din Hill în Forest
