@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+// EmpireRising - Tema 1 (versiune curată, fără warnings uzuale)
 
 class Unit {
 private:
@@ -58,7 +59,8 @@ public:
         return *this;
     }
 
-    ~Player() = default;
+    ~Player() {
+    }
 
     void addUnit(const Unit& u) {
         units.push_back(u);
@@ -66,9 +68,7 @@ public:
 
     int getTotalPower() const {
         int total = 0;
-        for (const auto& u : units) {
-            total += u.getPower();
-        }
+        for (const auto& u : units) total += u.getPower();
         return total;
     }
 
@@ -101,6 +101,16 @@ class Zone {
 private:
     std::string name;
     std::vector<Unit> units;
+
+    void compactUnits() {
+        std::vector<Unit> alive;
+        alive.reserve(units.size());
+        for (const auto& u : units) {
+            if (u.isAlive()) alive.push_back(u);
+        }
+        units.swap(alive);
+    }
+
 public:
     Zone(const std::string& name = "")
         : name(name), units() {}
@@ -124,25 +134,14 @@ public:
 
     int getZonePower() const {
         int total = 0;
-        for (const auto& u : units) {
-            total += u.getPower();
-        }
+        for (const auto& u : units) total += u.getPower();
         return total;
     }
 
     bool removeDeadUnits() {
-        bool removed = false;
-        std::vector<Unit> alive;
-        alive.reserve(units.size());
-        for (const auto& u : units) {
-            if (u.isAlive()) {
-                alive.push_back(u);
-            } else {
-                removed = true;
-            }
-        }
-        units.swap(alive);
-        return removed;
+        const size_t before = units.size();
+        compactUnits();
+        return units.size() != before;
     }
 
     const std::string& getName() const { return name; }
@@ -151,7 +150,7 @@ public:
     std::vector<Unit>& getUnits() { return units; }
 
     Unit getUnitAt(size_t index) const {
-        return units.at(index);
+        return units.at(index); // aruncă std::out_of_range dacă index invalid
     }
 
     void removeUnitAt(size_t index) {
@@ -177,6 +176,7 @@ class Game {
 private:
     std::vector<Player> players;
     std::vector<Zone> zones;
+
 public:
     Game() = default;
 
@@ -237,7 +237,7 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Game& g) {
-        os << "WarZones Game{\n  Players:\n";
+        os << "EmpireRising Game{\n  Players:\n";
         for (const auto& p : g.players) {
             os << "    " << p << "\n";
         }
@@ -279,9 +279,23 @@ int main() {
 
     std::cout << "Initial game state:\n" << game << "\n\n";
 
+    std::cout << "Player1 total power: " << p1.getTotalPower() << "\n";
+    std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
+
     game.battle(game.getZones()[0]);
 
-    std::cout << "\nAfter battle in Forest:\n" << game << "\n\n";
+    if (!game.getZones()[1].getUnits().empty()) {
+        game.moveUnit(game.getZones()[1], 0, game.getZones()[0]);
+    }
+
+    // cheltuim aur pentru a demonstra spendGold
+    if (p1.spendGold(30)) {
+        std::cout << p1.getName() << " spent 30 gold, remaining: " << p1.getGold() << "\n";
+    } else {
+        std::cout << p1.getName() << " could not spend 30 gold\n";
+    }
+
+    std::cout << "\nAfter actions:\n" << game << "\n\n";
 
     return 0;
 }
