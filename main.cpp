@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 
-// WarZones - Tema 1 (versiune fără warnings)
 
 class Unit {
 private:
@@ -13,7 +12,6 @@ public:
     Unit(const std::string& name = "", int health = 0, int attack = 0)
         : name(name), health(health), attack(attack) {}
 
-    // Rule of zero is fine here (no raw resources)
     void takeDamage(int dmg) {
         health -= dmg;
         if (health < 0) health = 0;
@@ -83,7 +81,6 @@ public:
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
 
-    // getter const și non-const pentru a evita const_cast
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
@@ -150,7 +147,6 @@ public:
 
     const std::string& getName() const { return name; }
 
-    // getter const și non-const pentru a evita const_cast
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
@@ -205,14 +201,12 @@ public:
         zones.push_back(z);
     }
 
-    // getter const și non-const pentru a putea modifica zonele fără const_cast
     const std::vector<Player>& getPlayers() const { return players; }
     std::vector<Player>& getPlayers() { return players; }
 
     const std::vector<Zone>& getZones() const { return zones; }
     std::vector<Zone>& getZones() { return zones; }
 
-    // mută o unitate dintr-o zonă în alta (folosind getter non-const)
     void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
         if (unitIndex >= from.getUnits().size()) return;
         Unit u = from.getUnitAt(unitIndex);
@@ -220,7 +214,6 @@ public:
         to.addUnit(u);
     }
 
-    // luptă între primele două unități din zonă (folosind getUnits non-const)
     void battle(Zone& z) {
         auto& units = z.getUnits();
         if (units.size() < 2) {
