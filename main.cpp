@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-// EmpireRising - Tema 1 (versiune curată, fără warnings uzuale)
+// EmpireRising - Tema 1 (versiune finală, fără warnings uzuale)
 
 class Unit {
 private:
@@ -47,6 +47,7 @@ public:
     Player(const std::string& name = "", int gold = 0)
         : name(name), gold(gold), units() {}
 
+    // Regula celor trei pentru această clasă
     Player(const Player& other)
         : name(other.name), gold(other.gold), units(other.units) {}
 
@@ -60,6 +61,7 @@ public:
     }
 
     ~Player() {
+        // destructor explicit (nu gestionează resurse raw)
     }
 
     void addUnit(const Unit& u) {
@@ -81,6 +83,7 @@ public:
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
 
+    // getter const și non-const (folosite în Game)
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
@@ -102,6 +105,7 @@ private:
     std::string name;
     std::vector<Unit> units;
 
+    // helper privat folosit de removeDeadUnits
     void compactUnits() {
         std::vector<Unit> alive;
         alive.reserve(units.size());
@@ -138,6 +142,7 @@ public:
         return total;
     }
 
+    // elimină unitățile moarte; returnează true dacă s-a eliminat ceva
     bool removeDeadUnits() {
         const size_t before = units.size();
         compactUnits();
@@ -146,6 +151,7 @@ public:
 
     const std::string& getName() const { return name; }
 
+    // getter const și non-const (folosite în Game)
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
@@ -201,12 +207,14 @@ public:
         zones.push_back(z);
     }
 
+    // getter const (păstrăm doar getter-ul const pentru players)
     const std::vector<Player>& getPlayers() const { return players; }
-    std::vector<Player>& getPlayers() { return players; }
 
+    // getter const și non-const pentru zones (folosite în main)
     const std::vector<Zone>& getZones() const { return zones; }
     std::vector<Zone>& getZones() { return zones; }
 
+    // mută o unitate dintr-o zonă în alta
     void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
         if (unitIndex >= from.getUnits().size()) return;
         Unit u = from.getUnitAt(unitIndex);
@@ -214,6 +222,7 @@ public:
         to.addUnit(u);
     }
 
+    // luptă între primele două unități din zonă
     void battle(Zone& z) {
         auto& units = z.getUnits();
         if (units.size() < 2) {
@@ -253,10 +262,15 @@ public:
 int main() {
     std::cout << "=== Welcome to EmpireRising ===\n\n";
 
+    // unități
     Unit swordsman("Swordsman", 100, 20);
     Unit archer("Archer", 70, 25);
     Unit knight("Knight", 120, 30);
 
+    // afișăm health pentru a folosi getHealth() (evităm warning pentru funcție nefolosită)
+    std::cout << swordsman.getName() << " initial health: " << swordsman.getHealth() << "\n";
+
+    // jucători
     Player p1("Player1", 100);
     Player p2("Player2", 80);
 
@@ -264,6 +278,7 @@ int main() {
     p1.addUnit(archer);
     p2.addUnit(knight);
 
+    // zone
     Zone forest("Forest");
     Zone hill("Hill");
 
@@ -271,24 +286,29 @@ int main() {
     forest.addUnit(knight);
     hill.addUnit(archer);
 
+    // joc
     Game game;
     game.addPlayer(p1);
     game.addPlayer(p2);
     game.addZone(forest);
     game.addZone(hill);
 
+    // afișare stare inițială
     std::cout << "Initial game state:\n" << game << "\n\n";
 
+    // apelăm funcții publice esențiale
     std::cout << "Player1 total power: " << p1.getTotalPower() << "\n";
     std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
 
+    // luptă în prima zonă (fără const_cast)
     game.battle(game.getZones()[0]);
 
+    // mutăm o unitate (dacă mai există) din Hill în Forest
     if (!game.getZones()[1].getUnits().empty()) {
         game.moveUnit(game.getZones()[1], 0, game.getZones()[0]);
     }
 
-    // cheltuim aur pentru a demonstra spendGold
+    // cheltuim gold pentru a demonstra spendGold
     if (p1.spendGold(30)) {
         std::cout << p1.getName() << " spent 30 gold, remaining: " << p1.getGold() << "\n";
     } else {
