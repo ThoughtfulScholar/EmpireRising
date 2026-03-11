@@ -251,7 +251,7 @@ public:
 };
 
 int main() {
-    std::cout << "=== Welcome to WarZones ===\n\n";
+    std::cout << "=== Welcome to EmpireRising ===\n\n";
 
     Unit swordsman("Swordsman", 100, 20);
     Unit archer("Archer", 70, 25);
@@ -279,7 +279,6 @@ int main() {
 
     std::cout << "Initial game state:\n" << game << "\n\n";
 
-    // folosim getter non-const pentru a obține referință la prima zonă
     game.battle(game.getZones()[0]);
 
     std::cout << "\nAfter battle in Forest:\n" << game << "\n\n";
