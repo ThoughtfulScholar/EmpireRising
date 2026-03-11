@@ -1,7 +1,8 @@
 #include <iostream>
-#include <array>
 #include <string>
 #include <vector>
+
+// WarZones - Tema 1 (versiune fără warnings)
 
 class Unit {
 private:
@@ -12,6 +13,7 @@ public:
     Unit(const std::string& name = "", int health = 0, int attack = 0)
         : name(name), health(health), attack(attack) {}
 
+    // Rule of zero is fine here (no raw resources)
     void takeDamage(int dmg) {
         health -= dmg;
         if (health < 0) health = 0;
@@ -80,7 +82,10 @@ public:
 
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
+
+    // getter const și non-const pentru a evita const_cast
     const std::vector<Unit>& getUnits() const { return units; }
+    std::vector<Unit>& getUnits() { return units; }
 
     friend std::ostream& operator<<(std::ostream& os, const Player& p) {
         os << "Player{name=" << p.name
@@ -144,7 +149,10 @@ public:
     }
 
     const std::string& getName() const { return name; }
+
+    // getter const și non-const pentru a evita const_cast
     const std::vector<Unit>& getUnits() const { return units; }
+    std::vector<Unit>& getUnits() { return units; }
 
     Unit getUnitAt(size_t index) const {
         return units.at(index);
@@ -152,7 +160,7 @@ public:
 
     void removeUnitAt(size_t index) {
         if (index < units.size()) {
-            units.erase(units.begin() + static_cast<long>(index));
+            units.erase(units.begin() + index);
         }
     }
 
@@ -197,6 +205,14 @@ public:
         zones.push_back(z);
     }
 
+    // getter const și non-const pentru a putea modifica zonele fără const_cast
+    const std::vector<Player>& getPlayers() const { return players; }
+    std::vector<Player>& getPlayers() { return players; }
+
+    const std::vector<Zone>& getZones() const { return zones; }
+    std::vector<Zone>& getZones() { return zones; }
+
+    // mută o unitate dintr-o zonă în alta (folosind getter non-const)
     void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
         if (unitIndex >= from.getUnits().size()) return;
         Unit u = from.getUnitAt(unitIndex);
@@ -204,12 +220,14 @@ public:
         to.addUnit(u);
     }
 
+    // luptă între primele două unități din zonă (folosind getUnits non-const)
     void battle(Zone& z) {
-        auto& units = const_cast<std::vector<Unit>&>(z.getUnits());
+        auto& units = z.getUnits();
         if (units.size() < 2) {
             std::cout << "Not enough units in zone " << z.getName() << " for battle.\n";
             return;
         }
+
         Unit& a = units[0];
         Unit& b = units[1];
 
@@ -225,11 +243,8 @@ public:
         z.removeDeadUnits();
     }
 
-    const std::vector<Player>& getPlayers() const { return players; }
-    const std::vector<Zone>& getZones() const { return zones; }
-
     friend std::ostream& operator<<(std::ostream& os, const Game& g) {
-        os << "Game{\n  Players:\n";
+        os << "WarZones Game{\n  Players:\n";
         for (const auto& p : g.players) {
             os << "    " << p << "\n";
         }
@@ -243,6 +258,8 @@ public:
 };
 
 int main() {
+    std::cout << "=== Welcome to WarZones ===\n\n";
+
     Unit swordsman("Swordsman", 100, 20);
     Unit archer("Archer", 70, 25);
     Unit knight("Knight", 120, 30);
@@ -269,7 +286,8 @@ int main() {
 
     std::cout << "Initial game state:\n" << game << "\n\n";
 
-    game.battle(const_cast<Zone&>(game.getZones()[0]));
+    // folosim getter non-const pentru a obține referință la prima zonă
+    game.battle(game.getZones()[0]);
 
     std::cout << "\nAfter battle in Forest:\n" << game << "\n\n";
 
