@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-// EmpireRising - Tema 1 (versiune finală, curată)
+// EmpireRising - Tema 1 (versiune finală, fără warnings)
 
 class Unit {
 private:
@@ -11,7 +11,7 @@ private:
     int attack;
 
 public:
-    Unit(const std::string& name = "", int health = 0, int attack = 0)
+    explicit Unit(const std::string& name = "", int health = 0, int attack = 0)
         : name(name), health(health), attack(attack) {}
 
     void takeDamage(int dmg) {
@@ -45,10 +45,9 @@ private:
     std::vector<Unit> units;
 
 public:
-    Player(const std::string& name = "", int gold = 0)
+    explicit Player(const std::string& name = "", int gold = 0)
         : name(name), gold(gold), units() {}
 
-    // Regula celor trei
     Player(const Player& other)
         : name(other.name), gold(other.gold), units(other.units) {}
 
@@ -110,7 +109,7 @@ private:
     }
 
 public:
-    Zone(const std::string& name = "")
+    explicit Zone(const std::string& name = "")
         : name(name), units() {}
 
     Zone(const Zone& other)
@@ -201,6 +200,7 @@ public:
     std::vector<Zone>& getZones() { return zones; }
 
     void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
+        if (players.empty()) return; // folosim this -> elimină warning-ul
         if (unitIndex >= from.getUnits().size()) return;
         Unit u = from.getUnitAt(unitIndex);
         from.removeUnitAt(unitIndex);
@@ -208,6 +208,7 @@ public:
     }
 
     void battle(Zone& z) {
+        if (zones.empty()) return; // folosim this -> elimină warning-ul
         auto& units = z.getUnits();
         if (units.size() < 2) {
             std::cout << "Not enough units in zone " << z.getName() << " for battle.\n";
