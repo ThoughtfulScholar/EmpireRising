@@ -2,13 +2,14 @@
 #include <string>
 #include <vector>
 
-// EmpireRising - Tema 1 (versiune finală, fără warnings uzuale)
+// EmpireRising - Tema 1 (versiune finală, curată)
 
 class Unit {
 private:
     std::string name;
     int health;
     int attack;
+
 public:
     Unit(const std::string& name = "", int health = 0, int attack = 0)
         : name(name), health(health), attack(attack) {}
@@ -27,7 +28,6 @@ public:
     }
 
     const std::string& getName() const { return name; }
-    int getHealth() const { return health; }
     int getAttack() const { return attack; }
 
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
@@ -43,10 +43,12 @@ private:
     std::string name;
     int gold;
     std::vector<Unit> units;
+
 public:
     Player(const std::string& name = "", int gold = 0)
         : name(name), gold(gold), units() {}
 
+    // Regula celor trei
     Player(const Player& other)
         : name(other.name), gold(other.gold), units(other.units) {}
 
@@ -59,8 +61,7 @@ public:
         return *this;
     }
 
-    ~Player() {
-    }
+    ~Player() {}
 
     void addUnit(const Unit& u) {
         units.push_back(u);
@@ -80,9 +81,7 @@ public:
 
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
-
     const std::vector<Unit>& getUnits() const { return units; }
-    std::vector<Unit>& getUnits() { return units; }
 
     friend std::ostream& operator<<(std::ostream& os, const Player& p) {
         os << "Player{name=" << p.name
@@ -102,13 +101,11 @@ private:
     std::string name;
     std::vector<Unit> units;
 
-    // helper privat folosit de removeDeadUnits
     void compactUnits() {
         std::vector<Unit> alive;
         alive.reserve(units.size());
-        for (const auto& u : units) {
+        for (const auto& u : units)
             if (u.isAlive()) alive.push_back(u);
-        }
         units.swap(alive);
     }
 
@@ -139,15 +136,13 @@ public:
         return total;
     }
 
-    // elimină unitățile moarte; returnează true dacă s-a eliminat ceva
     bool removeDeadUnits() {
-        const size_t before = units.size();
+        size_t before = units.size();
         compactUnits();
         return units.size() != before;
     }
 
     const std::string& getName() const { return name; }
-
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
@@ -156,9 +151,8 @@ public:
     }
 
     void removeUnitAt(size_t index) {
-        if (index < units.size()) {
+        if (index < units.size())
             units.erase(units.begin() + index);
-        }
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
@@ -203,14 +197,9 @@ public:
         zones.push_back(z);
     }
 
-    // getter const (păstrăm doar getter-ul const pentru players)
-    const std::vector<Player>& getPlayers() const { return players; }
-
-    // getter const și non-const pentru zones (folosite în main)
     const std::vector<Zone>& getZones() const { return zones; }
     std::vector<Zone>& getZones() { return zones; }
 
-    // mută o unitate dintr-o zonă în alta
     void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
         if (unitIndex >= from.getUnits().size()) return;
         Unit u = from.getUnitAt(unitIndex);
@@ -218,7 +207,6 @@ public:
         to.addUnit(u);
     }
 
-    // luptă între primele două unități din zonă
     void battle(Zone& z) {
         auto& units = z.getUnits();
         if (units.size() < 2) {
@@ -229,8 +217,9 @@ public:
         Unit& a = units[0];
         Unit& b = units[1];
 
-        std::cout << "Battle in zone " << z.getName() << " between "
-                  << a.getName() << " and " << b.getName() << "\n";
+        std::cout << "Battle in zone " << z.getName()
+                  << " between " << a.getName()
+                  << " and " << b.getName() << "\n";
 
         while (a.isAlive() && b.isAlive()) {
             b.takeDamage(a.getAttack());
@@ -243,13 +232,11 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Game& g) {
         os << "EmpireRising Game{\n  Players:\n";
-        for (const auto& p : g.players) {
+        for (const auto& p : g.players)
             os << "    " << p << "\n";
-        }
         os << "  Zones:\n";
-        for (const auto& z : g.zones) {
+        for (const auto& z : g.zones)
             os << "    " << z << "\n";
-        }
         os << "}";
         return os;
     }
@@ -258,15 +245,10 @@ public:
 int main() {
     std::cout << "=== Welcome to EmpireRising ===\n\n";
 
-    // unități
     Unit swordsman("Swordsman", 100, 20);
     Unit archer("Archer", 70, 25);
     Unit knight("Knight", 120, 30);
 
-    // afișăm health pentru a folosi getHealth() (evităm warning pentru funcție nefolosită)
-    std::cout << swordsman.getName() << " initial health: " << swordsman.getHealth() << "\n";
-
-    // jucători
     Player p1("Player1", 100);
     Player p2("Player2", 80);
 
@@ -274,7 +256,6 @@ int main() {
     p1.addUnit(archer);
     p2.addUnit(knight);
 
-    // zone
     Zone forest("Forest");
     Zone hill("Hill");
 
@@ -282,42 +263,24 @@ int main() {
     forest.addUnit(knight);
     hill.addUnit(archer);
 
-    // joc
     Game game;
     game.addPlayer(p1);
     game.addPlayer(p2);
     game.addZone(forest);
     game.addZone(hill);
 
-    // afișare stare inițială
     std::cout << "Initial game state:\n" << game << "\n\n";
 
-    // apelăm funcții publice esențiale
     std::cout << "Player1 total power: " << p1.getTotalPower() << "\n";
     std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
 
-    // luptă în prima zonă (fără const_cast)
-    
-    // Folosim getPlayers() pentru a afișa numele jucătorilor (evităm warning pentru funcție nefolosită)
-    std::cout << "Players in game:\n";
-    for (const auto& pl : game.getPlayers()) {
-        std::cout << "  - " << pl.getName() << " (gold: " << pl.getGold() << ")\n";
-    }
-    std::cout << '\n';
-    
     game.battle(game.getZones()[0]);
 
-    // mutăm o unitate (dacă mai există) din Hill în Forest
-    if (!game.getZones()[1].getUnits().empty()) {
+    if (!game.getZones()[1].getUnits().empty())
         game.moveUnit(game.getZones()[1], 0, game.getZones()[0]);
-    }
 
-    // cheltuim gold pentru a demonstra spendGold
-    if (p1.spendGold(30)) {
+    if (p1.spendGold(30))
         std::cout << p1.getName() << " spent 30 gold, remaining: " << p1.getGold() << "\n";
-    } else {
-        std::cout << p1.getName() << " could not spend 30 gold\n";
-    }
 
     std::cout << "\nAfter actions:\n" << game << "\n\n";
 
