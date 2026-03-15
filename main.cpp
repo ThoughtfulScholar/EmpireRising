@@ -47,7 +47,6 @@ public:
     Player(const std::string& name = "", int gold = 0)
         : name(name), gold(gold), units() {}
 
-    // Regula celor trei pentru această clasă
     Player(const Player& other)
         : name(other.name), gold(other.gold), units(other.units) {}
 
@@ -61,7 +60,6 @@ public:
     }
 
     ~Player() {
-        // destructor explicit (nu gestionează resurse raw)
     }
 
     void addUnit(const Unit& u) {
@@ -83,7 +81,6 @@ public:
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
 
-    // getter const și non-const (folosite în Game)
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
@@ -151,12 +148,11 @@ public:
 
     const std::string& getName() const { return name; }
 
-    // getter const și non-const (folosite în Game)
     const std::vector<Unit>& getUnits() const { return units; }
     std::vector<Unit>& getUnits() { return units; }
 
     Unit getUnitAt(size_t index) const {
-        return units.at(index); // aruncă std::out_of_range dacă index invalid
+        return units.at(index);
     }
 
     void removeUnitAt(size_t index) {
