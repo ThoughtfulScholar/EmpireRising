@@ -11,7 +11,7 @@ private:
     int attack;
 
 public:
-    explicit Unit(const std::string& name = "", int health = 0, int attack = 0)
+    Unit(const std::string& name = "", int health = 0, int attack = 0)
         : name(name), health(health), attack(attack) {}
 
     void takeDamage(int dmg) {
@@ -28,6 +28,7 @@ public:
     }
 
     const std::string& getName() const { return name; }
+    int getHealth() const { return health; }
     int getAttack() const { return attack; }
 
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
@@ -45,9 +46,10 @@ private:
     std::vector<Unit> units;
 
 public:
-    explicit Player(const std::string& name = "", int gold = 0)
+    Player(const std::string& name = "", int gold = 0)
         : name(name), gold(gold), units() {}
 
+    // Regula celor trei (cerință)
     Player(const Player& other)
         : name(other.name), gold(other.gold), units(other.units) {}
 
@@ -80,6 +82,7 @@ public:
 
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
+
     const std::vector<Unit>& getUnits() const { return units; }
 
     friend std::ostream& operator<<(std::ostream& os, const Player& p) {
@@ -100,28 +103,9 @@ private:
     std::string name;
     std::vector<Unit> units;
 
-    void compactUnits() {
-        std::vector<Unit> alive;
-        alive.reserve(units.size());
-        for (const auto& u : units)
-            if (u.isAlive()) alive.push_back(u);
-        units.swap(alive);
-    }
-
 public:
-    explicit Zone(const std::string& name = "")
+    Zone(const std::string& name = "")
         : name(name), units() {}
-
-    Zone(const Zone& other)
-        : name(other.name), units(other.units) {}
-
-    Zone& operator=(const Zone& other) {
-        if (this != &other) {
-            name = other.name;
-            units = other.units;
-        }
-        return *this;
-    }
 
     ~Zone() = default;
 
@@ -137,13 +121,18 @@ public:
 
     bool removeDeadUnits() {
         size_t before = units.size();
-        compactUnits();
+        std::vector<Unit> alive;
+        alive.reserve(units.size());
+
+        for (const auto& u : units)
+            if (u.isAlive()) alive.push_back(u);
+
+        units.swap(alive);
         return units.size() != before;
     }
 
     const std::string& getName() const { return name; }
     const std::vector<Unit>& getUnits() const { return units; }
-    std::vector<Unit>& getUnits() { return units; }
 
     Unit getUnitAt(size_t index) const {
         return units.at(index);
@@ -174,18 +163,6 @@ private:
 
 public:
     Game() = default;
-
-    Game(const Game& other)
-        : players(other.players), zones(other.zones) {}
-
-    Game& operator=(const Game& other) {
-        if (this != &other) {
-            players = other.players;
-            zones = other.zones;
-        }
-        return *this;
-    }
-
     ~Game() = default;
 
     void addPlayer(const Player& p) {
@@ -196,31 +173,28 @@ public:
         zones.push_back(z);
     }
 
+    const std::vector<Player>& getPlayers() const { return players; }
     const std::vector<Zone>& getZones() const { return zones; }
-    std::vector<Zone>& getZones() { return zones; }
 
-    void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
-        if (players.empty()) return; // folosim this -> elimină warning-ul
-        if (unitIndex >= from.getUnits().size()) return;
-        Unit u = from.getUnitAt(unitIndex);
-        from.removeUnitAt(unitIndex);
+    void moveUnit(Zone& from, size_t index, Zone& to) {
+        if (index >= from.getUnits().size()) return;
+        Unit u = from.getUnitAt(index);
+        from.removeUnitAt(index);
         to.addUnit(u);
     }
 
     void battle(Zone& z) {
-        if (zones.empty()) return; // folosim this -> elimină warning-ul
-        auto& units = z.getUnits();
+        auto& units = const_cast<std::vector<Unit>&>(z.getUnits());
         if (units.size() < 2) {
-            std::cout << "Not enough units in zone " << z.getName() << " for battle.\n";
+            std::cout << "Not enough units in zone " << z.getName() << "\n";
             return;
         }
 
         Unit& a = units[0];
         Unit& b = units[1];
 
-        std::cout << "Battle in zone " << z.getName()
-                  << " between " << a.getName()
-                  << " and " << b.getName() << "\n";
+        std::cout << "Battle in " << z.getName() << ": "
+                  << a.getName() << " vs " << b.getName() << "\n";
 
         while (a.isAlive() && b.isAlive()) {
             b.takeDamage(a.getAttack());
@@ -270,20 +244,16 @@ int main() {
     game.addZone(forest);
     game.addZone(hill);
 
-    std::cout << "Initial game state:\n" << game << "\n\n";
-
-    std::cout << "Player1 total power: " << p1.getTotalPower() << "\n";
-    std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
+    std::cout << "Initial state:\n" << game << "\n\n";
 
     game.battle(game.getZones()[0]);
 
     if (!game.getZones()[1].getUnits().empty())
         game.moveUnit(game.getZones()[1], 0, game.getZones()[0]);
 
-    if (p1.spendGold(30))
-        std::cout << p1.getName() << " spent 30 gold, remaining: " << p1.getGold() << "\n";
+    p1.spendGold(30);
 
-    std::cout << "\nAfter actions:\n" << game << "\n\n";
+    std::cout << "\nAfter actions:\n" << game << "\n";
 
     return 0;
 }
