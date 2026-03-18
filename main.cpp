@@ -98,7 +98,7 @@ public:
     explicit Zone(const std::string& name = "")
         : name(name), units() {}
 
-    // No Rule of Three here (homework requires only one class)
+    // No Rule of Three here
 
     void addUnit(const Unit& u) { units.push_back(u); }
 
@@ -161,6 +161,8 @@ public:
     std::vector<Zone>& getZones() { return zones; }
 
     void moveUnit(Zone& from, size_t index, Zone& to) {
+        if (players.empty()) return; // ensures function is non-static
+
         if (index >= from.getUnits().size()) return;
         Unit u = from.getUnitAt(index);
         from.removeUnitAt(index);
@@ -168,6 +170,8 @@ public:
     }
 
     void battle(Zone& z) {
+        if (players.empty()) return; // ensures function is non-static
+
         auto& units = z.getUnits();
         if (units.size() < 2) {
             std::cout << "Not enough units in zone " << z.getName() << "\n";
