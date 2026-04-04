@@ -48,6 +48,17 @@ include(cmake/CopyHelper.cmake)
 
 ###############################################################################
 
+include(FetchContent)
+FetchContent_Declare(
+  raylib
+  GIT_REPOSITORY https://github.com/raysan5/raylib.git
+  GIT_TAG        5.0
+)
+# Opțional: dezactivăm chestiile ce consumă timp la compilare în CI
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(raylib)
+
+###############################################################################
 
 # NOTE: update executable name in .github/workflows/cmake.yml:25 when changing name here
 add_executable(${MAIN_EXECUTABLE_NAME}
@@ -57,6 +68,17 @@ target_sources(${MAIN_EXECUTABLE_NAME}
     PRIVATE
         src/Example.cpp
 )
+
+
+# LINKARE LIBRĂRII
+target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE raylib)
+
+# FIX pentru Linux (X11) - Necesar pentru a trece bifele de Ubuntu/Debian
+if(UNIX AND NOT APPLE)
+    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE m pthread dl rt X11)
+endif()
+
+###############################################################################
 
 # NOTE: Add all defined targets (e.g. executables, libraries, etc. )
 # NOTE: RUN_SANITIZERS is optional, if it's not present it will default to true
