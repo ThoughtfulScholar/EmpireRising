@@ -1,253 +1,256 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <raylib.h>
 
-// EmpireRising - Tema 1 (final, CI-safe, homework-compliant)
-
+// --- 1. Clasa Unit (Compoziție de bază) ---
 class Unit {
 private:
-std::string name;
-int health;
-int attack;
+    std::string name;
+    int health;
+    int maxHealth;
+    int attack;
+    Color teamColor;
 
 public:
-explicit Unit(const std::string& name = "", int health = 0, int attack = 0)
-: name(name), health(health), attack(attack) {}
+    explicit Unit(const std::string& n = "Recruit", int hp = 100, int atk = 10, Color c = GRAY)
+        : name(n), health(hp), maxHealth(hp), attack(atk), teamColor(c) {}
 
-void takeDamage(int dmg) {
-health -= dmg;
-if (health < 0) health = 0;
-}
+    void takeDamage(int dmg) {
+        health -= dmg;
+        if (health < 0) health = 0;
+    }
 
-bool isAlive() const { return health > 0; }
-int getPower() const { return health + attack; }
+    // Funcții membru publice (Cerința: Funcționalități netriviale)
+    bool isAlive() const { return health > 0; }
+    int getPower() const { return health + attack; }
+    
+    // Getters const
+    const std::string& getName() const { return name; }
+    int getAttack() const { return attack; }
+    int getHealth() const { return health; }
+    int getMaxHealth() const { return maxHealth; }
+    Color getColor() const { return teamColor; }
 
-const std::string& getName() const { return name; }
-int getAttack() const { return attack; }
-
-friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
-os << "Unit{name=" << u.name
-<< ", health=" << u.health
-<< ", attack=" << u.attack << "}";
-return os;
-}
+    friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
+        os << "Unit{n:" << u.name << ", hp:" << u.health << ", atk:" << u.attack << "}";
+        return os;
+    }
 };
 
+// --- 2. Clasa Player (Implementează Rule of Three conform cerinței) ---
 class Player {
 private:
-std::string name;
-int gold;
-std::vector<Unit> units;
+    std::string name;
+    int gold;
+    Color color;
+    std::vector<Unit> reserveUnits; // Compoziție
 
 public:
-explicit Player(const std::string& name = "", int gold = 0)
-: name(name), gold(gold), units() {}
+    explicit Player(const std::string& n = "", int g = 0, Color c = BLUE)
+        : name(n), gold(g), color(c) {}
 
-// Rule of Three (required by homework)
-Player(const Player& other)
-: name(other.name), gold(other.gold), units(other.units) {}
+    // --- RULE OF THREE ---
+    Player(const Player& other) 
+        : name(other.name), gold(other.gold), color(other.color), reserveUnits(other.reserveUnits) {
+        // std::cout << "[Debug] Player Copy Constructor called\n";
+    }
 
-Player& operator=(const Player& other) {
-if (this != &other) {
-name = other.name;
-gold = other.gold;
-units = other.units;
-}
-return *this;
-}
+    Player& operator=(const Player& other) {
+        if (this != &other) {
+            name = other.name;
+            gold = other.gold;
+            color = other.color;
+            reserveUnits = other.reserveUnits;
+        }
+        return *this;
+    }
 
-~Player() {}
+    ~Player() {
+        // Destructor definit conform cerintei
+    }
+    // ----------------------
 
-void addUnit(const Unit& u) { units.push_back(u); }
+    bool spendGold(int amount) {
+        if (amount > gold) return false;
+        gold -= amount;
+        return true;
+    }
 
-int getTotalPower() const {
-int total = 0;
-for (const auto& u : units) total += u.getPower();
-return total;
-}
+    void addGold(int amount) { gold += amount; }
+    int getGold() const { return gold; }
+    Color getColor() const { return color; }
+    const std::string& getName() const { return name; }
 
-bool spendGold(int amount) {
-if (amount > gold) return false;
-gold -= amount;
-return true;
-}
-
-const std::string& getName() const { return name; }
-int getGold() const { return gold; }
-const std::vector<Unit>& getUnits() const { return units; }
-
-friend std::ostream& operator<<(std::ostream& os, const Player& p) {
-os << "Player{name=" << p.name
-<< ", gold=" << p.gold
-<< ", units=[";
-for (size_t i = 0; i < p.units.size(); ++i) {
-os << p.units[i];
-if (i + 1 < p.units.size()) os << ", ";
-}
-os << "]}";
-return os;
-}
+    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
+        os << "Player{name:" << p.name << ", gold:" << p.gold << ", units:" << p.reserveUnits.size() << "}";
+        return os;
+    }
 };
 
+// --- 3. Clasa Zone (Gestionare spațială și unități) ---
 class Zone {
 private:
-std::string name;
-std::vector<Unit> units;
+    std::string name;
+    Rectangle area;
+    std::vector<Unit> units; // Compoziție
 
 public:
-explicit Zone(const std::string& name = "")
-: name(name), units() {}
+    explicit Zone(const std::string& n = "", float x = 0, float y = 0, float w = 180, float h = 180)
+        : name(n), area({x, y, w, h}) {}
 
-    // No Rule of Three here (homework requires only one class)
-    // No Rule of Three here
+    void addUnit(const Unit& u) { units.push_back(u); }
 
-void addUnit(const Unit& u) { units.push_back(u); }
+    // Funcție netrivială: Curățarea unităților moarte din zonă
+    bool purgeDead() {
+        size_t initial = units.size();
+        for (auto it = units.begin(); it != units.end(); ) {
+            if (!it->isAlive()) it = units.erase(it);
+            else ++it;
+        }
+        return units.size() != initial;
+    }
 
-int getZonePower() const {
-int total = 0;
-for (const auto& u : units) total += u.getPower();
-return total;
-}
+    int getZonePower() const {
+        int total = 0;
+        for (const auto& u : units) total += u.getPower();
+        return total;
+    }
 
-bool removeDeadUnits() {
-size_t before = units.size();
-std::vector<Unit> alive;
-alive.reserve(units.size());
+    // Randare Raylib
+    void draw() const {
+        DrawRectangleRec(area, Fade(DARKGRAY, 0.3f));
+        DrawRectangleLinesEx(area, 2, LIGHTGRAY);
+        DrawText(name.c_str(), static_cast<int>(area.x) + 10, static_cast<int>(area.y) + 10, 20, WHITE);
+        
+        for (size_t i = 0; i < units.size(); ++i) {
+            int posX = static_cast<int>(area.x) + 30 + (static_cast<int>(i) % 4) * 35;
+            int posY = static_cast<int>(area.y) + 60 + (static_cast<int>(i) / 4) * 40;
+            DrawCircle(posX, posY, 12, units[i].getColor());
+            
+            // Bara de HP
+            float hpBarWidth = 24.0f;
+            float currentHpWidth = hpBarWidth * (static_cast<float>(units[i].getHealth()) / units[i].getMaxHealth());
+            DrawRectangle(posX - 12, posY + 15, static_cast<int>(hpBarWidth), 4, MAROON);
+            DrawRectangle(posX - 12, posY + 15, static_cast<int>(currentHpWidth), 4, GREEN);
+        }
+    }
 
-for (const auto& u : units)
-if (u.isAlive()) alive.push_back(u);
+    bool checkClick(Vector2 mousePos) const {
+        return CheckCollisionPointRec(mousePos, area);
+    }
 
-units.swap(alive);
-return units.size() != before;
-}
+    std::vector<Unit>& getUnits() { return units; }
+    const std::string& getName() const { return name; }
 
-const std::string& getName() const { return name; }
-const std::vector<Unit>& getUnits() const { return units; }
-std::vector<Unit>& getUnits() { return units; }
-
-Unit getUnitAt(size_t index) const { return units.at(index); }
-
-void removeUnitAt(size_t index) {
-if (index < units.size())
-units.erase(units.begin() + index);
-}
-
-friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
-os << "Zone{name=" << z.name
-<< ", power=" << z.getZonePower()
-<< ", units=[";
-for (size_t i = 0; i < z.units.size(); ++i) {
-os << z.units[i];
-if (i + 1 < z.units.size()) os << ", ";
-}
-os << "]}";
-return os;
-}
+    friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
+        os << "Zone{name:" << z.name << ", units:" << z.units.size() << "}";
+        return os;
+    }
 };
 
+// --- 4. Clasa Game (Clasa principală, Compoziție Game -> Players & Zones) ---
 class Game {
 private:
-std::vector<Player> players;
-std::vector<Zone> zones;
+    std::vector<Player> players;
+    std::vector<Zone> zones;
+    std::string statusLog;
 
 public:
-Game() = default;
+    Game() : statusLog("Welcome, Commander!") {
+        InitWindow(850, 650, "EmpireRising - Medieval Strategy");
+        SetTargetFPS(60);
+    }
 
-// No Rule of Three here
+    ~Game() { CloseWindow(); }
 
-void addPlayer(const Player& p) { players.push_back(p); }
-void addZone(const Zone& z) { zones.push_back(z); }
+    void init() {
+        players.emplace_back("Human", 200, BLUE);
+        players.emplace_back("AI Enemy", 500, RED);
 
-const std::vector<Zone>& getZones() const { return zones; }
-std::vector<Zone>& getZones() { return zones; }
+        zones.emplace_back("West Fortress", 50, 150);
+        zones.emplace_back("Central Valley", 335, 150);
+        zones.emplace_back("East Outpost", 620, 150);
+    }
 
-void moveUnit(Zone& from, size_t index, Zone& to) {
-        if (players.empty()) return; // ensures function is non-static
+    // Funcție complexă: Gestionarea luptei în zone
+    void processBattles() {
+        for (auto& z : zones) {
+            auto& units = z.getUnits();
+            if (units.size() >= 2) {
+                // Dacă unitățile aparțin unor echipe diferite, se atacă
+                for (size_t i = 0; i < units.size(); ++i) {
+                    for (size_t j = i + 1; j < units.size(); ++j) {
+                        if (units[i].getColor().r != units[j].getColor().r) {
+                            units[j].takeDamage(units[i].getAttack() / 10); // Daune pe frame (simulat)
+                            units[i].takeDamage(units[j].getAttack() / 10);
+                        }
+                    }
+                }
+                if (z.purgeDead()) {
+                    statusLog = "Units fell in " + z.getName();
+                }
+            }
+        }
+    }
 
-if (index >= from.getUnits().size()) return;
-Unit u = from.getUnitAt(index);
-from.removeUnitAt(index);
-to.addUnit(u);
-}
+    void handleInput() {
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            Vector2 m = GetMousePosition();
+            for (auto& z : zones) {
+                if (z.checkClick(m)) {
+                    if (players[0].spendGold(30)) {
+                        z.addUnit(Unit("Knight", 120, 25, players[0].getColor()));
+                        statusLog = "Recruited Knight in " + z.getName();
+                    }
+                }
+            }
+        }
+        // AI simplu: Adaugă unități periodic în Outpostul de Est
+        if (GetTime() > 0 && static_cast<int>(GetTime()) % 5 == 0 && GetTime() - static_cast<int>(GetTime()) < 0.02) {
+             zones[2].addUnit(Unit("Enemy", 80, 15, players[1].getColor()));
+        }
+    }
 
-void battle(Zone& z) {
-        if (players.empty()) return; // ensures function is non-static
+    void render() const {
+        BeginDrawing();
+        ClearBackground(GetColor(0x181818FF));
 
-auto& units = z.getUnits();
-if (units.size() < 2) {
-std::cout << "Not enough units in zone " << z.getName() << "\n";
-return;
-}
+        // Header UI
+        DrawRectangle(0, 0, 850, 50, DARKGRAY);
+        DrawText(TextFormat("GOLD: %d", players[0].getGold()), 20, 15, 20, GOLD);
+        DrawText(statusLog.c_str(), 250, 15, 20, LIGHTGRAY);
 
-Unit& a = units[0];
-Unit& b = units[1];
+        for (const auto& z : zones) z.draw();
 
-std::cout << "Battle in " << z.getName()
-<< ": " << a.getName()
-<< " vs " << b.getName() << "\n";
+        DrawText("Instruction: CLICK on a zone to buy a unit (30 Gold)", 20, 610, 18, GRAY);
+        
+        EndDrawing();
+    }
 
-while (a.isAlive() && b.isAlive()) {
-b.takeDamage(a.getAttack());
-if (!b.isAlive()) break;
-a.takeDamage(b.getAttack());
-}
+    void run() {
+        while (!WindowShouldClose()) {
+            handleInput();
+            processBattles();
+            render();
+        }
+    }
 
-z.removeDeadUnits();
-}
-
-friend std::ostream& operator<<(std::ostream& os, const Game& g) {
-os << "EmpireRising Game{\n  Players:\n";
-for (const auto& p : g.players)
-os << "    " << p << "\n";
-os << "  Zones:\n";
-for (const auto& z : g.zones)
-os << "    " << z << "\n";
-os << "}";
-return os;
-}
+    friend std::ostream& operator<<(std::ostream& os, const Game& g) {
+        os << "Game Status: " << g.statusLog;
+        return os;
+    }
 };
 
 int main() {
-std::cout << "=== Welcome to EmpireRising ===\n\n";
+    // Scenariu de utilizare conform cerinței
+    Game engine;
+    engine.init();
+    
+    // Afișare stare inițială folosind operator<< pentru a demonstra funcționarea
+    std::cout << engine << std::endl;
 
-Unit swordsman("Swordsman", 100, 20);
-Unit archer("Archer", 70, 25);
-Unit knight("Knight", 120, 30);
+    engine.run();
 
-Player p1("Player1", 100);
-Player p2("Player2", 80);
-
-p1.addUnit(swordsman);
-p1.addUnit(archer);
-p2.addUnit(knight);
-
-Zone forest("Forest");
-Zone hill("Hill");
-
-forest.addUnit(swordsman);
-forest.addUnit(knight);
-hill.addUnit(archer);
-
-Game game;
-game.addPlayer(p1);
-game.addPlayer(p2);
-game.addZone(forest);
-game.addZone(hill);
-
-std::cout << "Initial game state:\n" << game << "\n\n";
-
-std::cout << "Player1 total power: " << p1.getTotalPower() << "\n";
-std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
-
-game.battle(game.getZones()[0]);
-
-if (!game.getZones()[1].getUnits().empty())
-game.moveUnit(game.getZones()[1], 0, game.getZones()[0]);
-
-if (p1.spendGold(30))
-std::cout << p1.getName() << " spent 30 gold, remaining: " << p1.getGold() << "\n";
-
-std::cout << "\nAfter actions:\n" << game << "\n\n";
-
-return 0;
+    return 0;
 }
