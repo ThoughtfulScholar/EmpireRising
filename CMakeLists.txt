@@ -48,6 +48,20 @@ include(cmake/CopyHelper.cmake)
 
 ###############################################################################
 
+include(FetchContent)
+FetchContent_Declare(
+  raylib
+  GIT_REPOSITORY https://github.com/raysan5/raylib.git
+  GIT_TAG        5.0
+)
+FetchContent_MakeAvailable(raylib)
+
+# ... restul configurărilor tale ...
+
+# Caută unde ai add_executable(EmpireRising main.cpp) - sau cum se numește la tine
+# Și adaugă această linie imediat după:
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+
 # NOTE: update executable name in .github/workflows/cmake.yml:25 when changing name here
 add_executable(${MAIN_EXECUTABLE_NAME}
     main.cpp
