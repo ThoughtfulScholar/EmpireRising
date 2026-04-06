@@ -34,7 +34,6 @@ env:
   APP_WINDOW: "My Window"
   SFML_VERSION: "3.0.2"
 
-
 defaults:
   run:
     # Use a bash shell, so we can use the same syntax for environment variable
