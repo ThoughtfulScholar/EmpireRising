@@ -1,5 +1,5 @@
-name: 'Linux dependencies'
-description: 'Logic for Linux installation'
+name: 'Install common Linux dependencies'
+description: 'Common logic for Linux dependencies installation'
 runs:
   using: "composite"
   steps:
