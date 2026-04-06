@@ -1,20 +1,29 @@
+#include <iostream>
+#include <array>
 #include <chrono>
 #include <thread>
-#include <iostream>
-#include <string>
-#include <vector>
+
 #include <raylib-cpp.hpp>
 
-// EmpireRising - Tema 1 (final, CI-safe, homework-compliant)
+#include <iostream>
+#include <array>
+#include "include/Example.h"
+// This also works if you do not want `include/`, but some editors might not like it
+// #include "Example.h"
+#include <string>
+#include <vector>
 
+//////////////////////////////////////////////////////////////////////
+/// This class is used to test that the memory leak checks work as expected even when using a GUI
+class SomeClass {
 class Unit {
 private:
     std::string name;
     int health;
     int attack;
-
 public:
-    explicit Unit(const std::string& name = "", int health = 0, int attack = 0)
+    explicit SomeClass(int) {}
+    Unit(const std::string& name = "", int health = 0, int attack = 0)
         : name(name), health(health), attack(attack) {}
 
     void takeDamage(int dmg) {
@@ -22,10 +31,16 @@ public:
         if (health < 0) health = 0;
     }
 
-    bool isAlive() const { return health > 0; }
-    int getPower() const { return health + attack; }
+    bool isAlive() const {
+        return health > 0;
+    }
+
+    int getPower() const {
+        return health + attack;
+    }
 
     const std::string& getName() const { return name; }
+    int getHealth() const { return health; }
     int getAttack() const { return attack; }
 
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
@@ -36,20 +51,99 @@ public:
     }
 };
 
+SomeClass *getC() {
+    return new SomeClass{2};
+}
+//////////////////////////////////////////////////////////////////////
 class Player {
 private:
     std::string name;
     int gold;
     std::vector<Unit> units;
-
 public:
-    explicit Player(const std::string& name = "", int gold = 0)
+    Player(const std::string& name = "", int gold = 0)
         : name(name), gold(gold), units() {}
 
-    // Rule of Three (required by homework)
     Player(const Player& other)
         : name(other.name), gold(other.gold), units(other.units) {}
 
+int main() {
+    std::cout << "Hello, world!\n";
+    Example e1;
+    e1.g();
+    std::array<int, 100> v{};
+    int nr;
+    std::cout << "Introduceți nr: ";
+    /////////////////////////////////////////////////////////////////////////
+    /// Observație: dacă aveți nevoie să citiți date de intrare de la tastatură,
+    /// dați exemple de date de intrare folosind fișierul tastatura.txt
+    /// Trebuie să aveți în fișierul tastatura.txt suficiente date de intrare
+    /// (în formatul impus de voi) astfel încât execuția programului să se încheie.
+    /// De asemenea, trebuie să adăugați în acest fișier date de intrare
+    /// pentru cât mai multe ramuri de execuție.
+    /// Dorim să facem acest lucru pentru a automatiza testarea codului, fără să
+    /// mai pierdem timp de fiecare dată să introducem de la zero aceleași date de intrare.
+    ///
+    /// Pe GitHub Actions (bife), fișierul tastatura.txt este folosit
+    /// pentru a simula date introduse de la tastatură.
+    /// Bifele verifică dacă programul are erori de compilare, erori de memorie și memory leaks.
+    ///
+    /// Dacă nu puneți în tastatura.txt suficiente date de intrare, îmi rezerv dreptul să vă
+    /// testez codul cu ce date de intrare am chef și să nu pun notă dacă găsesc vreun bug.
+    /// Impun această cerință ca să învățați să faceți un demo și să arătați părțile din
+    /// program care merg (și să le evitați pe cele care nu merg).
+    ///
+    /////////////////////////////////////////////////////////////////////////
+    std::cin >> nr;
+    /////////////////////////////////////////////////////////////////////////
+    for(int i = 0; i < nr; ++i) {
+        std::cout << "v[" << i << "] = ";
+        std::cin >> v[i];
+    }
+    std::cout << "\n\n";
+    std::cout << "Am citit de la tastatură " << nr << " elemente:\n";
+    for(int i = 0; i < nr; ++i) {
+        std::cout << "- " << v[i] << "\n";
+    }
+    ///////////////////////////////////////////////////////////////////////////
+    /// Pentru date citite din fișier, NU folosiți tastatura.txt. Creați-vă voi
+    /// alt fișier propriu cu ce alt nume doriți.
+    /// Exemplu:
+    /// std::ifstream fis("date.txt");
+    /// for(int i = 0; i < nr2; ++i)
+    ///     fis >> v2[i];
+    ///
+    ///////////////////////////////////////////////////////////////////////////
+
+    SomeClass *c = getC();
+    std::cout << c << "\n";
+    delete c;  // comentarea acestui rând ar trebui să ducă la semnalarea unui mem leak
+
+// Dimensiunile ferestrei
+    int screenWidth = 800;
+    int screenHeight = 700;
+
+    // Crearea ferestrei (constructorul raylib::Window o inițializează automat)
+    // NOTE: sync with env variable APP_WINDOW from .github/workflows/cmake.yml:31
+    raylib::Window window(screenWidth, screenHeight, "My Window");
+
+    std::cout << "Fereastra a fost creată\n";
+
+    // NOTE: mandatory use one of vsync or FPS limit (not both)
+    // În Raylib, setarea FPS limitează automat și consumul GPU
+    window.SetTargetFPS(60); 
+    // Dacă preferi VSync: SetConfigFlags(FLAG_VSYNC_HINT); înainte de init
+
+    // Loop-ul principal
+    while (!window.ShouldClose()) { // ShouldClose verifică automat butonul de închidere (X)
+        bool shouldExit = false;
+
+        // Gestionarea evenimentelor (Raylib verifică starea în fiecare frame)
+        
+        // Verificare Resize
+        if (window.IsResized()) {
+            std::cout << "New width: " << window.GetWidth() << '\n'
+                      << "New height: " << window.GetHeight() << '\n';
     Player& operator=(const Player& other) {
         if (this != &other) {
             name = other.name;
@@ -59,13 +153,17 @@ public:
         return *this;
     }
 
-    ~Player() {}
+    ~Player() = default;
 
-    void addUnit(const Unit& u) { units.push_back(u); }
+    void addUnit(const Unit& u) {
+        units.push_back(u);
+    }
 
     int getTotalPower() const {
         int total = 0;
-        for (const auto& u : units) total += u.getPower();
+        for (const auto& u : units) {
+            total += u.getPower();
+}
         return total;
     }
 
@@ -75,6 +173,9 @@ public:
         return true;
     }
 
+        // Verificare Taste
+        if (IsKeyPressed(KEY_X)) {
+            std::cout << "Received key X\n";
     const std::string& getName() const { return name; }
     int getGold() const { return gold; }
     const std::vector<Unit>& getUnits() const { return units; }
@@ -86,7 +187,7 @@ public:
         for (size_t i = 0; i < p.units.size(); ++i) {
             os << p.units[i];
             if (i + 1 < p.units.size()) os << ", ";
-        }
+}
         os << "]}";
         return os;
     }
@@ -96,43 +197,78 @@ class Zone {
 private:
     std::string name;
     std::vector<Unit> units;
-
 public:
-    explicit Zone(const std::string& name = "")
+    Zone(const std::string& name = "")
         : name(name), units() {}
 
-    // No Rule of Three here (homework requires only one class)
-    // No Rule of Three here
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            shouldExit = true;
+    Zone(const Zone& other)
+        : name(other.name), units(other.units) {}
 
-    void addUnit(const Unit& u) { units.push_back(u); }
+    Zone& operator=(const Zone& other) {
+        if (this != &other) {
+            name = other.name;
+            units = other.units;
+        }
+        return *this;
+    }
+
+    ~Zone() = default;
+
+    void addUnit(const Unit& u) {
+        units.push_back(u);
+    }
 
     int getZonePower() const {
         int total = 0;
-        for (const auto& u : units) total += u.getPower();
+        for (const auto& u : units) {
+            total += u.getPower();
+}
         return total;
     }
 
+        if (shouldExit) {
+            std::cout << "Fereastra a fost închisă (shouldExit == true)\n";
+            break; // Ieșim din loop, fereastra se închide la distrugerea obiectului
     bool removeDeadUnits() {
-        size_t before = units.size();
+        bool removed = false;
         std::vector<Unit> alive;
         alive.reserve(units.size());
-
-        for (const auto& u : units)
-            if (u.isAlive()) alive.push_back(u);
-
+        for (const auto& u : units) {
+            if (u.isAlive()) {
+                alive.push_back(u);
+            } else {
+                removed = true;
+            }
+}
         units.swap(alive);
-        return units.size() != before;
+        return removed;
     }
 
+        // Simulare delay din exemplul tău (atenție: strică fluiditatea ferestrei)
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(300ms);
     const std::string& getName() const { return name; }
     const std::vector<Unit>& getUnits() const { return units; }
-    std::vector<Unit>& getUnits() { return units; }
 
-    Unit getUnitAt(size_t index) const { return units.at(index); }
+        // Randare
+        BeginDrawing();
+            window.ClearBackground(RAYWHITE); // Echivalentul lui window.clear()
+            
+            // Aici poți desena chestii
+            
+        EndDrawing(); // Echivalentul lui window.display()
+    Unit getUnitAt(size_t index) const {
+        return units.at(index);
+}
 
+    std::cout << "Fereastra a fost închisă\n";
+    std::cout << "Programul a terminat execuția\n";
     void removeUnitAt(size_t index) {
-        if (index < units.size())
-            units.erase(units.begin() + index);
+        if (index < units.size()) {
+            units.erase(units.begin() + static_cast<long>(index));
+        }
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
@@ -152,42 +288,48 @@ class Game {
 private:
     std::vector<Player> players;
     std::vector<Zone> zones;
-
 public:
     Game() = default;
 
-    // No Rule of Three here
+    Game(const Game& other)
+        : players(other.players), zones(other.zones) {}
 
-    void addPlayer(const Player& p) { players.push_back(p); }
-    void addZone(const Zone& z) { zones.push_back(z); }
+    Game& operator=(const Game& other) {
+        if (this != &other) {
+            players = other.players;
+            zones = other.zones;
+        }
+        return *this;
+    }
 
-    const std::vector<Zone>& getZones() const { return zones; }
-    std::vector<Zone>& getZones() { return zones; }
+    ~Game() = default;
 
-    void moveUnit(Zone& from, size_t index, Zone& to) {
-        if (players.empty()) return; // ensures function is non-static
+    void addPlayer(const Player& p) {
+        players.push_back(p);
+    }
 
-        if (index >= from.getUnits().size()) return;
-        Unit u = from.getUnitAt(index);
-        from.removeUnitAt(index);
+    void addZone(const Zone& z) {
+        zones.push_back(z);
+    }
+
+    void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
+        if (unitIndex >= from.getUnits().size()) return;
+        Unit u = from.getUnitAt(unitIndex);
+        from.removeUnitAt(unitIndex);
         to.addUnit(u);
     }
 
     void battle(Zone& z) {
-        if (players.empty()) return; // ensures function is non-static
-
-        auto& units = z.getUnits();
+        auto& units = const_cast<std::vector<Unit>&>(z.getUnits());
         if (units.size() < 2) {
-            std::cout << "Not enough units in zone " << z.getName() << "\n";
+            std::cout << "Not enough units in zone " << z.getName() << " for battle.\n";
             return;
         }
-
         Unit& a = units[0];
         Unit& b = units[1];
 
-        std::cout << "Battle in " << z.getName()
-                  << ": " << a.getName()
-                  << " vs " << b.getName() << "\n";
+        std::cout << "Battle in zone " << z.getName() << " between "
+                  << a.getName() << " and " << b.getName() << "\n";
 
         while (a.isAlive() && b.isAlive()) {
             b.takeDamage(a.getAttack());
@@ -198,21 +340,24 @@ public:
         z.removeDeadUnits();
     }
 
+    const std::vector<Player>& getPlayers() const { return players; }
+    const std::vector<Zone>& getZones() const { return zones; }
+
     friend std::ostream& operator<<(std::ostream& os, const Game& g) {
-        os << "EmpireRising Game{\n  Players:\n";
-        for (const auto& p : g.players)
+        os << "Game{\n  Players:\n";
+        for (const auto& p : g.players) {
             os << "    " << p << "\n";
+        }
         os << "  Zones:\n";
-        for (const auto& z : g.zones)
+        for (const auto& z : g.zones) {
             os << "    " << z << "\n";
+        }
         os << "}";
         return os;
     }
 };
 
 int main() {
-    std::cout << "=== Welcome to EmpireRising ===\n\n";
-
     Unit swordsman("Swordsman", 100, 20);
     Unit archer("Archer", 70, 25);
     Unit knight("Knight", 120, 30);
@@ -239,21 +384,9 @@ int main() {
 
     std::cout << "Initial game state:\n" << game << "\n\n";
 
-    std::cout << "Player1 total power: " << p1.getTotalPower() << "\n";
-    std::cout << "Forest power before battle: " << game.getZones()[0].getZonePower() << "\n";
+    game.battle(const_cast<Zone&>(game.getZones()[0]));
 
-    game.battle(game.getZones()[0]);
+    std::cout << "\nAfter battle in Forest:\n" << game << "\n\n";
 
-    if (!game.getZones()[1].getUnits().empty())
-        game.moveUnit(game.getZones()[1], 0, game.getZones()[0]);
-
-    if (p1.spendGold(30))
-        std::cout << p1.getName() << " spent 30 gold, remaining: " << p1.getGold() << "\n";
-
-    std::cout << "\nAfter actions:\n" << game << "\n\n";
-
-    return 0;
-}
-
-    return 0;
+return 0;
 }
