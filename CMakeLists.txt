@@ -20,50 +20,33 @@ include(cmake/CompilerFlags.cmake)
 include(cmake/CopyHelper.cmake)
 
 ###############################################################################
+
 # external dependencies with FetchContent
-include(FetchContent)
-
-set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
-set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
-
-# Dezactivăm chestiile grele din Raylib pentru a trece bifele mai repede
-set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
-
-FetchContent_Declare(
-    raylib
-    GIT_REPOSITORY https://github.com/raysan5/raylib.git
-    GIT_TAG        5.5
-    GIT_SHALLOW    1
-    GIT_PROGRESS   ON
-)
-
-FetchContent_Declare(
-    raylib-cpp
-    GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
-    GIT_TAG        v5.5.0
-    GIT_SHALLOW    1
-    GIT_PROGRESS   ON
-)
-
-FetchContent_MakeAvailable(raylib raylib-cpp)
+# include(FetchContent)
+#
+# set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
+# set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
+#
+# NOTE: Also update env vars used for caching in
+#     - .github/actions/configure-cmake/action.yml
+#     - .github/workflows/cmake.yml
+# FetchContent_Declare(
+#     SomeLib
+#     GIT_REPOSITORY https://github.com/<SomeUser>/<SomeLib>.git
+#     GIT_TAG        <some_git_hash> # <which tag/branch @ <some_date>>
+#     GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
+#     GIT_PROGRESS   ON
+# )
+#
+# FetchContent_MakeAvailable(SomeLib)
 
 ###############################################################################
-# Linkarea (Pune asta după add_executable)
-# Caută linia: add_executable(${MAIN_EXECUTABLE_NAME} main.cpp)
 
-target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE 
-    raylib 
-    raylib-cpp
-)
+# external dependencies with find_package
 
-# Această parte este CRITICĂ pentru bifa de pe Linux (Ubuntu)
-if(UNIX AND NOT APPLE)
-    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE 
-        X11 Xcursor Xinerama Xi Xrandr GL m pthread dl rt
-    )
-endif()
+# find_package(Threads REQUIRED)
 
+###############################################################################
 
 # NOTE: update executable name in .github/workflows/cmake.yml:25 when changing name here
 add_executable(${MAIN_EXECUTABLE_NAME}
@@ -89,17 +72,10 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} PUBLIC
 )
 target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
     ext
-    ${raylib_SOURCE_DIR}/src
-    ${raylib-cpp_SOURCE_DIR}/include
 )
-target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-    raylib Threads::Threads
-)
-
-if(APPLE)
-elseif(UNIX)
-    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE X11)
-endif()
+# target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
+# target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
+# target_link_libraries(${MAIN_EXECUTABLE_NAME} <SomeLib>)
 
 ###############################################################################
 
