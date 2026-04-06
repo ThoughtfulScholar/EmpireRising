@@ -90,10 +90,17 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} PUBLIC
 )
 target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
     ext
+    ${raylib_SOURCE_DIR}/src
+    ${raylib-cpp_SOURCE_DIR}/include
 )
-# target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE ${<SomeLib>_SOURCE_DIR}/include)
-# target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
-# target_link_libraries(${MAIN_EXECUTABLE_NAME} <SomeLib>)
+target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
+    raylib Threads::Threads
+)
+
+if(APPLE)
+elseif(UNIX)
+    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE X11)
+endif()
 
 ###############################################################################
 
