@@ -20,51 +20,50 @@ include(cmake/CompilerFlags.cmake)
 include(cmake/CopyHelper.cmake)
 
 ###############################################################################
-
 # external dependencies with FetchContent
 include(FetchContent)
 
 set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
-set(SFML_WARNINGS_AS_ERRORS OFF)
 
-# NOTE: Also update SFML_VERSION and other env vars used for caching in
-#     - .github/actions/configure-cmake/action.yml
-#     - .github/workflows/cmake.yml
+# Dezactivăm chestiile grele din Raylib pentru a trece bifele mai repede
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
     raylib
     GIT_REPOSITORY https://github.com/raysan5/raylib.git
-    # renovate: datasource=github-tags depName=raysan5/raylib versioning=loose
     GIT_TAG        5.5
-    GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
+    GIT_SHALLOW    1
     GIT_PROGRESS   ON
 )
 
 FetchContent_Declare(
     raylib-cpp
     GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
-    # renovate: datasource=github-tags depName=RobLoach/raylib-cpp versioning=loose
     GIT_TAG        v5.5.0
-    GIT_SHALLOW    1  # works only with branches or tags, not with arbitrary commit hashes
+    GIT_SHALLOW    1
     GIT_PROGRESS   ON
 )
 
-
 FetchContent_MakeAvailable(raylib raylib-cpp)
 
-
-
 ###############################################################################
+# Linkarea (Pune asta după add_executable)
+# Caută linia: add_executable(${MAIN_EXECUTABLE_NAME} main.cpp)
 
-# external dependencies with find_package
+target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE 
+    raylib 
+    raylib-cpp
+)
 
-find_package(Threads REQUIRED)
-if(APPLE)
-elseif(UNIX)
-    find_package(X11)
+# Această parte este CRITICĂ pentru bifa de pe Linux (Ubuntu)
+if(UNIX AND NOT APPLE)
+    target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE 
+        X11 Xcursor Xinerama Xi Xrandr GL m pthread dl rt
+    )
 endif()
 
-###############################################################################
 
 # NOTE: update executable name in .github/workflows/cmake.yml:25 when changing name here
 add_executable(${MAIN_EXECUTABLE_NAME}
