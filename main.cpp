@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <raylib-cpp.hpp>
 
 // EmpireRising - Tema 1 (final, CI-safe, homework-compliant)
 
