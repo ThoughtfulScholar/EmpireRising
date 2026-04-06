@@ -5,16 +5,28 @@ runs:
   using: "composite"
   steps:
     # Common Linux dependencies
-    - name: Install Linux Dependencies
+    - name: Install common Linux Dependencies
+      if: runner.os == 'Linux'
+      uses: ./.github/actions/install-linux-deps
+
+    - name: More Linux Dependencies (Raylib & Tools)
       shell: bash
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install ninja-build
+        sudo apt-get install -y ninja-build xdotool \
+          openbox \
+          libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev \
+          libxi-dev libgl1-mesa-dev libglu1-mesa-dev \
+          libxkbcommon-dev libxkbcommon-x11-0 \
+          libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+          libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+
+        # Fix pentru LLVM/Clang
+        sudo sysctl vm.mmap_rnd_bits=28
 
     - name: Install valgrind
       shell: bash
       if: runner.os == 'Linux' && matrix.runs_valgrind == true
       run: |
-        # sudo apt-get update
-        sudo apt-get install --no-install-recommends valgrind
+        sudo apt-get install -y --no-install-recommends valgrind
