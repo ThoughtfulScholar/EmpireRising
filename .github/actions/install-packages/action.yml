@@ -4,25 +4,23 @@ description: 'Install required packages'
 runs:
   using: "composite"
   steps:
-    - name: Install All Linux Dependencies (Raylib + Tools)
+    # 1. Chemăm folderul nou creat (exact cum face colegul tău)
+    - name: Install common Linux Dependencies
+      if: runner.os == 'Linux'
+      uses: ./.github/actions/install-linux-deps
+
+    # 2. Varianta de la prof (am lăsat ninja-build, am adăugat xdotool/openbox pt. teste grafice)
+    - name: Install Linux Dependencies
       shell: bash
       if: runner.os == 'Linux'
       run: |
-        sudo apt update
-        sudo apt install -y \
-          ninja-build xdotool openbox \
-          libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev \
-          libxi-dev libgl1-mesa-dev libglu1-mesa-dev \
-          libasound2-dev libpulse-dev libxkbcommon-dev \
-          libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 \
-          libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
-          libxcb-xinerama0 libxcb-xfixes0
-          
-        # Fix pentru testele de memorie ale profesorului
+        sudo apt-get install -y ninja-build xdotool openbox
+        # Fix pentru LLVM/Clang necesar în template
         sudo sysctl vm.mmap_rnd_bits=28
 
+    # 3. Valgrind-ul de la prof (neschimbat)
     - name: Install valgrind
       shell: bash
       if: runner.os == 'Linux' && matrix.runs_valgrind == true
       run: |
-        sudo apt install -y --no-install-recommends valgrind
+        sudo apt-get install -y --no-install-recommends valgrind
