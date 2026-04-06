@@ -1,6 +1,4 @@
-# EmpireRising
-Fac un joc de strategie medievala asemanator jocului "Age of Conquest". Jucatorul va putea crea unitati folosind aur si sa se lupte cu alte
-unitati inamice cucerind zone de pe harta.
+# Nu primesc notă pentru că nu am pus titlu și descriere
 
 ### Folosiți template-ul corespunzător grupei voastre!
 
@@ -102,6 +100,13 @@ Proiectul este configurat cu CMake.
 
 Instrucțiuni pentru terminal:
 
+0. Biblioteci necesare pe Linux (ar trebui să meargă pe sisteme bazate pe Debian/Arch/Fedora/OpenSUSE, necesită `sudo`)
+```sh
+bash ./scripts/install-sfml-deps.sh
+```
+
+Dacă lipsesc și alte biblioteci, ștergeți folder-ul de build de la pasul 1 și reconfigurați proiectul după ce ați instalat ce lipsea.
+
 1. Pasul de configurare
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -188,5 +193,8 @@ The project is licensed under [AGPLv3](LICENSE).
 The [template repository](https://github.com/mcmarius/oop-template) itself is licensed under [Unlicense](LICENSE.template).
 
 ## Resurse
-
+<!-- renovate: datasource=github-tags depName=raysan5/raylib versioning=loose -->
+- [raylib](https://github.com/raysan5/raylib/tree/5.5) (Zlib)
+<!-- renovate: datasource=github-tags depName=RobLoach/raylib-cpp versioning=loose -->
+- [raylib-cpp](https://github.com/RobLoach/raylib-cpp/tree/v5.5.0) (Zlib)
 - adăugați trimiteri **detaliate** către resursele externe care v-au ajutat sau pe care le-ați folosit
