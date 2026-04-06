@@ -1,4 +1,4 @@
-name: 'Install common Linux dependencies'
+name: 'Linux dependencies'
 description: 'Logic for Linux installation'
 runs:
   using: "composite"
