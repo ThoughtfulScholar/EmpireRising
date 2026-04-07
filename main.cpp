@@ -1,281 +1,176 @@
-#include <chrono>
-#include <thread>
-#include <raylib-cpp.hpp>
 #include <iostream>
-#include <array>
-#include "include/Example.h"
-#include <string>
 #include <vector>
+#include <string>
+#include <algorithm>
+#include <ctime>
+#include <raylib-cpp.hpp>
 
+// 1. CLASA ABILITY (Compunere)
+class Ability {
+private:
+    std::string abilityName;
+    int powerMultiplier;
+public:
+    // Constructor explicit pentru un singur parametru (Cerința Tema 1)
+    explicit Ability(std::string name = "Normal", int mult = 1) 
+        : abilityName(std::move(name)), powerMultiplier(mult) {}
+
+    [[nodiscard]] int getMultiplier() const { return powerMultiplier; }
+    [[nodiscard]] const std::string& getName() const { return abilityName; }
+
+    friend std::ostream& operator<<(std::ostream& os, const Ability& a) {
+        return os << "[" << a.abilityName << " x" << a.powerMultiplier << "]";
+    }
+};
+
+// 2. CLASA UNIT (Regula celor 3)
 class Unit {
 private:
     std::string name;
     int health;
+    int maxHealth;
     int attack;
+    Ability specialMove;
+    raylib::Color unitColor;
+
 public:
-    Unit(const std::string& name = "", int health = 0, int attack = 0)
-        : name(name), health(health), attack(attack) {}
+    Unit(std::string n, int h, int a, Ability ab, raylib::Color c)
+        : name(std::move(n)), health(h), maxHealth(h), attack(a), specialMove(std::move(ab)), unitColor(c) {}
 
-    void takeDamage(int dmg) {
-        health -= dmg;
-        if (health < 0) health = 0;
+    // REGULA CELOR TREI
+    Unit(const Unit& other) 
+        : name(other.name), health(other.health), maxHealth(other.maxHealth), 
+          attack(other.attack), specialMove(other.specialMove), unitColor(other.unitColor) {}
+
+    Unit& operator=(const Unit& other) {
+        if (this != &other) {
+            name = other.name;
+            health = other.health;
+            maxHealth = other.maxHealth;
+            attack = other.attack;
+            specialMove = other.specialMove;
+            unitColor = other.unitColor;
+        }
+        return *this;
+    }
+    ~Unit() = default;
+
+    // Funcție Netrivială 1: Calcul complex atac
+    [[nodiscard]] int calculateStrike() const {
+        if (health < (maxHealth / 4)) return attack * 2; // Desperate strike
+        return attack * specialMove.getMultiplier();
     }
 
-    bool isAlive() const {
-        return health > 0;
-    }
-
-    int getPower() const {
-        return health + attack;
-    }
-
-    const std::string& getName() const { return name; }
-    int getHealth() const { return health; }
-    int getAttack() const { return attack; }
+    void applyDamage(int dmg) { health = std::max(0, health - dmg); }
+    [[nodiscard]] bool isAlive() const { return health > 0; }
+    [[nodiscard]] int getHP() const { return health; }
+    [[nodiscard]] int getMaxHP() const { return maxHealth; }
+    [[nodiscard]] const std::string& getName() const { return name; }
+    [[nodiscard]] raylib::Color getColor() const { return unitColor; }
 
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
-        os << "Unit{name=" << u.name
-           << ", health=" << u.health
-           << ", attack=" << u.attack << "}";
-        return os;
+        return os << u.name << " (HP: " << u.health << ") " << u.specialMove;
     }
 };
 
-class Player {
-private:
-    std::string name;
-    int gold;
-    std::vector<Unit> units;
-public:
-    Player(const std::string& name = "", int gold = 0)
-        : name(name), gold(gold), units() {}
-
-    Player(const Player& other)
-        : name(other.name), gold(other.gold), units(other.units) {}
-
-    Player& operator=(const Player& other) {
-        if (this != &other) {
-            name = other.name;
-            gold = other.gold;
-            units = other.units;
-        }
-        return *this;
-    }
-
-    ~Player() = default;
-
-    void addUnit(const Unit& u) {
-        units.push_back(u);
-    }
-
-    int getTotalPower() const {
-        int total = 0;
-        for (const auto& u : units) {
-            total += u.getPower();
-        }
-        return total;
-    }
-
-    bool spendGold(int amount) {
-        if (amount > gold) return false;
-        gold -= amount;
-        return true;
-    }
-
-    const std::string& getName() const { return name; }
-    int getGold() const { return gold; }
-    const std::vector<Unit>& getUnits() const { return units; }
-
-    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
-        os << "Player{name=" << p.name
-           << ", gold=" << p.gold
-           << ", units=[";
-        for (size_t i = 0; i < p.units.size(); ++i) {
-            os << p.units[i];
-            if (i + 1 < p.units.size()) os << ", ";
-        }
-        os << "]}";
-        return os;
-    }
-};
-
+// 3. CLASA ZONE (Compunere)
 class Zone {
 private:
-    std::string name;
-    std::vector<Unit> units;
+    std::string zoneName;
+    std::vector<Unit> garrison;
 public:
-    Zone(const std::string& name = "")
-        : name(name), units() {}
+    explicit Zone(std::string name) : zoneName(std::move(name)) {}
 
-    Zone(const Zone& other)
-        : name(other.name), units(other.units) {}
+    void addUnit(const Unit& u) { garrison.push_back(u); }
 
-    Zone& operator=(const Zone& other) {
-        if (this != &other) {
-            name = other.name;
-            units = other.units;
-        }
-        return *this;
+    // Funcție Netrivială 2: Algoritm de luptă și curățare
+    void resolveConflict() {
+        if (garrison.size() < 2) return;
+        garrison[1].applyDamage(garrison[0].calculateStrike());
+        if (garrison[1].isAlive()) garrison[0].applyDamage(garrison[1].calculateStrike());
+
+        garrison.erase(std::remove_if(garrison.begin(), garrison.end(), 
+            [](const Unit& u) { return !u.isAlive(); }), garrison.end());
     }
 
-    ~Zone() = default;
-
-    void addUnit(const Unit& u) {
-        units.push_back(u);
-    }
-
-    int getZonePower() const {
-        int total = 0;
-        for (const auto& u : units) {
-            total += u.getPower();
-        }
-        return total;
-    }
-
-    bool removeDeadUnits() {
-        bool removed = false;
-        std::vector<Unit> alive;
-        alive.reserve(units.size());
-        for (const auto& u : units) {
-            if (u.isAlive()) {
-                alive.push_back(u);
-            } else {
-                removed = true;
-            }
-        }
-        units.swap(alive);
-        return removed;
-    }
-
-    const std::string& getName() const { return name; }
-    const std::vector<Unit>& getUnits() const { return units; }
-
-    Unit getUnitAt(size_t index) const {
-        return units.at(index);
-    }
-
-    void removeUnitAt(size_t index) {
-        if (index < units.size()) {
-            units.erase(units.begin() + static_cast<long>(index));
-        }
-    }
+    [[nodiscard]] const std::vector<Unit>& getGarrison() const { return garrison; }
+    [[nodiscard]] const std::string& getName() const { return zoneName; }
 
     friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
-        os << "Zone{name=" << z.name
-           << ", power=" << z.getZonePower()
-           << ", units=[";
-        for (size_t i = 0; i < z.units.size(); ++i) {
-            os << z.units[i];
-            if (i + 1 < z.units.size()) os << ", ";
-        }
-        os << "]}";
+        os << "Zona: " << z.zoneName << " | Unitati: " << z.garrison.size();
+        for(const auto& u : z.garrison) os << "\n  -> " << u;
         return os;
     }
 };
 
+// 4. CLASA PLAYER
+class Player {
+private:
+    std::string username;
+    int gold;
+public:
+    Player(std::string n, int g) : username(std::move(n)), gold(g) {}
+    [[nodiscard]] std::string getInfo() const { return username + " | Gold: " + std::to_string(gold); }
+    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
+        return os << "Player: " << p.username;
+    }
+};
+
+// 5. CLASA GAME (Manager)
 class Game {
 private:
-    std::vector<Player> players;
-    std::vector<Zone> zones;
+    Player player;
+    std::vector<Zone> map;
 public:
-    Game() = default;
+    explicit Game(Player p) : player(std::move(p)) {}
 
-    Game(const Game& other)
-        : players(other.players), zones(other.zones) {}
+    void init() {
+        Zone z("Arena");
+        z.addUnit(Unit("Erou", 100, 20, Ability("Foc", 2), raylib::Color::Blue()));
+        z.addUnit(Unit("Monstru", 150, 10, Ability(), raylib::Color::Red()));
+        map.push_back(z);
+    }
 
-    Game& operator=(const Game& other) {
-        if (this != &other) {
-            players = other.players;
-            zones = other.zones;
+    // Funcție Netrivială 3: Randare Grafică
+    void draw(raylib::Window& window) {
+        window.ClearBackground(raylib::Color::Black());
+        raylib::Text(player.getInfo(), 20, 20, 20, raylib::Color::Gold());
+        int y = 80;
+        for (const auto& z : map) {
+            raylib::Text(z.getName(), 30, y, 22, raylib::Color::White());
+            y += 30;
+            for (const auto& u : z.getGarrison()) {
+                raylib::DrawRectangle(40, y, (int)((float)u.getHP()/u.getMaxHP()*100), 15, u.getColor());
+                y += 20;
+            }
         }
-        return *this;
     }
 
-    ~Game() = default;
-
-    void addPlayer(const Player& p) {
-        players.push_back(p);
-    }
-
-    void addZone(const Zone& z) {
-        zones.push_back(z);
-    }
-
-    void moveUnit(Zone& from, size_t unitIndex, Zone& to) {
-        if (unitIndex >= from.getUnits().size()) return;
-        Unit u = from.getUnitAt(unitIndex);
-        from.removeUnitAt(unitIndex);
-        to.addUnit(u);
-    }
-
-    void battle(Zone& z) {
-        auto& units = const_cast<std::vector<Unit>&>(z.getUnits());
-        if (units.size() < 2) {
-            std::cout << "Not enough units in zone " << z.getName() << " for battle.\n";
-            return;
+    void update() {
+        if (IsKeyPressed(KEY_SPACE)) {
+            for (auto& z : map) z.resolveConflict();
+            std::cout << *this << std::endl;
         }
-        Unit& a = units[0];
-        Unit& b = units[1];
-
-        std::cout << "Battle in zone " << z.getName() << " between "
-                  << a.getName() << " and " << b.getName() << "\n";
-
-        while (a.isAlive() && b.isAlive()) {
-            b.takeDamage(a.getAttack());
-            if (!b.isAlive()) break;
-            a.takeDamage(b.getAttack());
-        }
-
-        z.removeDeadUnits();
     }
-
-    const std::vector<Player>& getPlayers() const { return players; }
-    const std::vector<Zone>& getZones() const { return zones; }
 
     friend std::ostream& operator<<(std::ostream& os, const Game& g) {
-        os << "Game{\n  Players:\n";
-        for (const auto& p : g.players) {
-            os << "    " << p << "\n";
-        }
-        os << "  Zones:\n";
-        for (const auto& z : g.zones) {
-            os << "    " << z << "\n";
-        }
-        os << "}";
+        os << "Game status for " << g.player << "\nMap zones: " << g.map.size();
         return os;
     }
 };
 
 int main() {
-    Unit swordsman("Swordsman", 100, 20);
-    Unit archer("Archer", 70, 25);
-    Unit knight("Knight", 120, 30);
+    raylib::Window window(800, 600, "Empire Rising v0.1");
+    SetTargetFPS(60);
 
-    Player p1("Player1", 100);
-    Player p2("Player2", 80);
+    Game engine(Player("Stefan", 1000));
+    engine.init();
 
-    p1.addUnit(swordsman);
-    p1.addUnit(archer);
-    p2.addUnit(knight);
-
-    Zone forest("Forest");
-    Zone hill("Hill");
-
-    forest.addUnit(swordsman);
-    forest.addUnit(knight);
-    hill.addUnit(archer);
-
-    Game game;
-    game.addPlayer(p1);
-    game.addPlayer(p2);
-    game.addZone(forest);
-    game.addZone(hill);
-
-    std::cout << "Initial game state:\n" << game << "\n\n";
-
-    game.battle(const_cast<Zone&>(game.getZones()[0]));
-
-    std::cout << "\nAfter battle in Forest:\n" << game << "\n\n";
-
+    while (!window.ShouldClose()) {
+        engine.update();
+        BeginDrawing();
+        engine.draw(window);
+        EndDrawing();
+    }
     return 0;
 }
