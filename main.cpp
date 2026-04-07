@@ -3,29 +3,28 @@
 #include <string>
 #include <algorithm>
 #include <ctime>
-#include <raylib.h> // Folosim header-ul standard pentru funcții grafice
-#include <raylib-cpp.hpp>
+#include <raylib.h>
 
 // ==========================================
-// 1. CLASA ITEM (Compunere pentru Unit)
+// 1. CLASA ABILITY (Compunere)
 // ==========================================
-class Item {
+class SpecialAbility {
 private:
-    std::string itemName;
-    int atkBonus;
-    int hpBonus;
-    int price;
+    std::string name;
+    int damageBonus;
+    float chance;
 public:
-    Item(std::string n = "None", int a = 0, int h = 0, int p = 0)
-        : itemName(std::move(n)), atkBonus(a), hpBonus(h), price(p) {}
+    explicit SpecialAbility(std::string n = "None", int dmg = 0, float c = 0.0f)
+        : name(std::move(n)), damageBonus(dmg), chance(c) {}
 
-    [[nodiscard]] int getAtk() const { return atkBonus; }
-    [[nodiscard]] int getHp() const { return hpBonus; }
-    [[nodiscard]] int getPrice() const { return price; }
-    [[nodiscard]] const std::string& getName() const { return itemName; }
+    [[nodiscard]] int getBonus() const {
+        if (((float)rand() / RAND_MAX) < chance) return damageBonus;
+        return 0;
+    }
+    [[nodiscard]] const std::string& getName() const { return name; }
 
-    friend std::ostream& operator<<(std::ostream& os, const Item& i) {
-        return os << i.itemName << " (ATK+" << i.atkBonus << " HP+" << i.hpBonus << ")";
+    friend std::ostream& operator<<(std::ostream& os, const SpecialAbility& a) {
+        return os << a.name << " (Bonus:" << a.damageBonus << ")";
     }
 };
 
@@ -38,17 +37,18 @@ private:
     int health;
     int maxHealth;
     int attack;
-    Item equippedItem;
-    Color color;
+    int defense;
+    SpecialAbility ability; // Compunere 1
+    Color teamColor;
 
 public:
-    Unit(std::string n, int h, int a, Color c)
-        : name(std::move(n)), health(h), maxHealth(h), attack(a), equippedItem(), color(c) {}
+    Unit(std::string n, int h, int a, int d, SpecialAbility sa, Color c)
+        : name(std::move(n)), health(h), maxHealth(h), attack(a), defense(d), ability(std::move(sa)), teamColor(c) {}
 
     // REGULA CELOR TREI
     Unit(const Unit& other) 
         : name(other.name), health(other.health), maxHealth(other.maxHealth), 
-          attack(other.attack), equippedItem(other.equippedItem), color(other.color) {}
+          attack(other.attack), defense(other.defense), ability(other.ability), teamColor(other.teamColor) {}
 
     Unit& operator=(const Unit& other) {
         if (this != &other) {
@@ -56,210 +56,243 @@ public:
             health = other.health;
             maxHealth = other.maxHealth;
             attack = other.attack;
-            equippedItem = other.equippedItem;
-            color = other.color;
+            defense = other.defense;
+            ability = other.ability;
+            teamColor = other.teamColor;
         }
         return *this;
     }
     ~Unit() = default;
 
-    // Funcție Netrivială 1: Echipare cu recalculare stats
-    void equip(const Item& newItem) {
-        equippedItem = newItem;
-        health += newItem.getHp();
-        maxHealth += newItem.getHp();
+    // Funcție Netrivială 1: Calcul complex de luptă
+    int calculateAttack(float terrainModifier) {
+        int base = static_cast<int>(attack * terrainModifier);
+        int bonus = ability.getBonus();
+        if (bonus > 0) std::cout << name << " a activat " << ability.getName() << "!\n";
+        return base + bonus;
     }
 
-    [[nodiscard]] int getTotalAtk() const { return attack + equippedItem.getAtk(); }
-    void takeDamage(int dmg) { health = std::max(0, health - dmg); }
+    void takeDamage(int dmg) {
+        int finalDmg = std::max(1, dmg - defense);
+        health = std::max(0, health - finalDmg);
+    }
+
     [[nodiscard]] bool isAlive() const { return health > 0; }
-    
-    // Getters
     [[nodiscard]] int getHP() const { return health; }
     [[nodiscard]] int getMaxHP() const { return maxHealth; }
     [[nodiscard]] const std::string& getName() const { return name; }
-    [[nodiscard]] Color getColor() const { return color; }
+    [[nodiscard]] Color getColor() const { return teamColor; }
 
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
-        return os << u.name << " HP:" << u.health << " ATK:" << u.getTotalAtk() << " Item:" << u.equippedItem;
+        return os << u.name << " [" << u.health << "/" << u.maxHealth << "] Ability: " << u.ability;
     }
 };
 
 // ==========================================
-// 3. CLASA PLAYER (Gestiune resurse)
+// 3. CLASA TERRAIN (Compunere pentru Zone)
 // ==========================================
-class Player {
+class Terrain {
 private:
-    std::string username;
-    int gold;
-    std::vector<Item> inventory;
-
+    std::string type;
+    float atkMod;
+    float defMod;
+    Color tint;
 public:
-    Player(std::string n, int g) : username(std::move(n)), gold(g) {}
+    explicit Terrain(std::string t = "Plains", float am = 1.0f, float dm = 1.0f, Color c = GREEN)
+        : type(std::move(t)), atkMod(am), defMod(dm), tint(c) {}
 
-    bool buyItem(const Item& it) {
-        if (gold >= it.getPrice()) {
-            gold -= it.getPrice();
-            inventory.push_back(it);
-            return true;
-        }
-        return false;
-    }
+    [[nodiscard]] float getAtkMod() const { return atkMod; }
+    [[nodiscard]] const std::string& getType() const { return type; }
+    [[nodiscard]] Color getTint() const { return tint; }
 
-    void addGold(int amount) { gold += amount; }
-    [[nodiscard]] int getGold() const { return gold; }
-    [[nodiscard]] const std::string& getName() const { return username; }
-    [[nodiscard]] const std::vector<Item>& getInventory() const { return inventory; }
-
-    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
-        return os << "Player " << p.username << " | Gold: " << p.gold;
+    friend std::ostream& operator<<(std::ostream& os, const Terrain& t) {
+        return os << "Terrain: " << t.type << " (Atk x" << t.atkMod << ")";
     }
 };
 
 // ==========================================
-// 4. CLASA ZONE (Logică de luptă)
+// 4. CLASA BUILDING (Mine de aur)
+// ==========================================
+class Building {
+private:
+    std::string bName;
+    int goldPerTick;
+public:
+    explicit Building(std::string n = "Tent", int g = 0) : bName(std::move(n)), goldPerTick(g) {}
+    [[nodiscard]] int collect() const { return goldPerTick; }
+    [[nodiscard]] const std::string& getName() const { return bName; }
+
+    friend std::ostream& operator<<(std::ostream& os, const Building& b) {
+        return os << b.bName << " (+" << b.goldPerTick << "g)";
+    }
+};
+
+// ==========================================
+// 5. CLASA ZONE (Gestiune complexă)
 // ==========================================
 class Zone {
 private:
-    std::string zoneName;
-    std::vector<Unit> units;
+    std::string name;
+    Terrain env; // Compunere 2
+    std::vector<Unit> army;
+    Building structure; // Compunere 3
     std::vector<std::string> logs;
 
 public:
-    explicit Zone(std::string name) : zoneName(std::move(name)) {}
+    Zone(std::string n, Terrain t, Building b) : name(std::move(n)), env(t), structure(b) {}
 
-    void addUnit(const Unit& u) { units.push_back(u); }
+    void addUnit(const Unit& u) { army.push_back(u); }
 
-    // Funcție Netrivială 2: Luptă automată cu log-uri
-    void fightStep() {
-        if (units.size() < 2) return;
+    // Funcție Netrivială 2: Simulare de luptă pe rânduri
+    void processBattle() {
+        if (army.size() < 2) return;
         
-        int d1 = units[0].getTotalAtk();
-        units[1].takeDamage(d1);
-        logs.push_back(units[0].getName() + " hits " + units[1].getName() + " for " + std::to_string(d1));
+        int damageA = army[0].calculateAttack(env.getAtkMod());
+        army[1].takeDamage(damageA);
+        logs.push_back(army[0].getName() + " hits for " + std::to_string(damageA));
 
-        if (units[1].isAlive()) {
-            int d2 = units[1].getTotalAtk();
-            units[0].takeDamage(d2);
-            logs.push_back(units[1].getName() + " hits " + units[0].getName() + " for " + std::to_string(d2));
+        if (army[1].isAlive()) {
+            int damageB = army[1].calculateAttack(env.getAtkMod());
+            army[0].takeDamage(damageB);
+            logs.push_back(army[1].getName() + " hits for " + std::to_string(damageB));
         }
 
-        // Cleanup folosind algorithm
-        units.erase(std::remove_if(units.begin(), units.end(), 
-            [](const Unit& u) { return !u.isAlive(); }), units.end());
+        // Curățare STL
+        army.erase(std::remove_if(army.begin(), army.end(), 
+            [](const Unit& u) { return !u.isAlive(); }), army.end());
     }
 
-    [[nodiscard]] const std::vector<Unit>& getUnits() const { return units; }
-    [[nodiscard]] const std::string& getName() const { return zoneName; }
+    int getIncome() const { return structure.collect(); }
+    [[nodiscard]] const std::vector<Unit>& getUnits() const { return army; }
+    [[nodiscard]] const Terrain& getTerrain() const { return env; }
+    [[nodiscard]] const std::string& getName() const { return name; }
     [[nodiscard]] const std::vector<std::string>& getLogs() const { return logs; }
 
     friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
-        os << "Zone: " << z.zoneName << " Units: " << z.units.size();
+        os << "Zone: " << z.name << " | " << z.env << " | Building: " << z.structure;
         return os;
     }
 };
 
 // ==========================================
-// 5. CLASA GAME (Manager interactiv)
+// 6. CLASA PLAYER
 // ==========================================
-class Game {
+class Player {
 private:
-    Player player;
-    std::vector<Zone> regions;
-    std::vector<Item> shop;
-
+    std::string username;
+    int gold;
 public:
-    explicit Game(Player p) : player(std::move(p)) {
-        shop.push_back(Item("Sword", 10, 0, 100));
-        shop.push_back(Item("Shield", 2, 50, 150));
-        shop.push_back(Item("Relic", 20, 20, 300));
+    Player(std::string n, int g) : username(std::move(n)), gold(g) {}
+    void addGold(int amount) { gold += amount; }
+    bool spend(int amount) {
+        if (gold >= amount) { gold -= amount; return true; }
+        return false;
     }
+    [[nodiscard]] int getGold() const { return gold; }
+    [[nodiscard]] const std::string& getName() const { return username; }
 
-    void init() {
-        Zone forest("Shadow Forest");
-        forest.addUnit(Unit("Soldier", 100, 15, BLUE));
-        forest.addUnit(Unit("Goblin", 80, 12, GREEN));
-        regions.push_back(forest);
-
-        Zone arena("War Arena");
-        arena.addUnit(Unit("Knight", 200, 25, RED));
-        arena.addUnit(Unit("Dragon", 500, 40, PURPLE));
-        regions.push_back(arena);
-    }
-
-    // Funcție Netrivială 3: Randare interfață complexă
-    void draw() {
-        ClearBackground(BLACK);
-        
-        // Player Info
-        DrawText(TextFormat("PLAYER: %s | GOLD: %i", player.getName().c_str(), player.getGold()), 20, 20, 22, GOLD);
-        DrawText("SPACE to Fight | S to Buy Sword (100g) | E to Equip", 20, 50, 18, LIGHTGRAY);
-
-        int y = 100;
-        for (const auto& z : regions) {
-            DrawRectangle(20, y, 760, 30, DARKGRAY);
-            DrawText(z.getName().c_str(), 30, y + 5, 20, WHITE);
-            y += 40;
-
-            for (const auto& u : z.getUnits()) {
-                float hpBar = (float)u.getHP() / u.getMaxHP() * 200;
-                DrawRectangle(30, y, 200, 20, MAROON);
-                DrawRectangle(30, y, (int)hpBar, 20, u.getColor());
-                DrawText(TextFormat("%s (%i/%i)", u.getName().c_str(), u.getHP(), u.getMaxHP()), 40, y + 2, 16, WHITE);
-                y += 25;
-            }
-
-            // Draw Logs
-            int logY = y - (z.getUnits().size() * 25);
-            auto logs = z.getLogs();
-            int count = 0;
-            for(auto it = logs.rbegin(); it != logs.rend() && count < 3; ++it, ++count) {
-                DrawText(it->c_str(), 400, logY + (count * 20), 14, GRAY);
-            }
-            y += 20;
-        }
-    }
-
-    void handleInput() {
-        if (IsKeyPressed(KEY_SPACE)) {
-            for (auto& r : regions) r.fightStep();
-        }
-        if (IsKeyPressed(KEY_S)) {
-            if (player.buyItem(shop[0])) std::cout << "Bought Sword!\n";
-        }
-        if (IsKeyPressed(KEY_E)) {
-            // Echipăm prima unitate din prima zonă cu ultimul item cumpărat
-            if (!player.getInventory().empty() && !regions[0].getUnits().empty()) {
-                // Notă: Folosim un mic truc de logică pentru a modifica fără a strica încapsularea
-                auto& zoneUnits = const_cast<std::vector<Unit>&>(regions[0].getUnits());
-                zoneUnits[0].equip(player.getInventory().back());
-            }
-        }
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const Game& g) {
-        return os << "Game active for " << g.player.getName();
+    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
+        return os << "Player: " << p.username << " | Gold: " << p.gold;
     }
 };
 
 // ==========================================
-// 6. MAIN
+// 7. CLASA GAME (Managerul principal)
+// ==========================================
+class Game {
+private:
+    Player p;
+    std::vector<Zone> world;
+    int tickCounter;
+
+public:
+    explicit Game(Player player) : p(std::move(player)), tickCounter(0) {}
+
+    void setup() {
+        srand(static_cast<unsigned int>(time(NULL)));
+        
+        // Zona 1: Pădure cu Mină de aur mică
+        Zone forest("Forbidden Woods", Terrain("Forest", 0.8f, 1.2f, DARKGREEN), Building("Small Mine", 10));
+        forest.addUnit(Unit("Archer", 80, 25, 5, SpecialAbility("Double Shot", 20, 0.3f), BLUE));
+        forest.addUnit(Unit("Spider", 120, 15, 8, SpecialAbility("Poison", 10, 0.5f), RED));
+        world.push_back(forest);
+
+        // Zona 2: Munte cu Fortăreață
+        Zone mountain("Iron Peak", Terrain("Mountain", 1.5f, 0.7f, GRAY), Building("Gold Fortress", 50));
+        mountain.addUnit(Unit("Knight", 200, 30, 15, SpecialAbility("Shield Bash", 15, 0.2f), BLUE));
+        mountain.addUnit(Unit("Giant", 400, 40, 5, SpecialAbility("Stomp", 40, 0.1f), RED));
+        world.push_back(mountain);
+    }
+
+    // Funcție Netrivială 3: Randare și Sistem de Tick-uri
+    void render() {
+        ClearBackground(GetColor(0x181818FF));
+        
+        DrawRectangle(0, 0, 800, 60, DARKGRAY);
+        DrawText(TextFormat("PLAYER: %s | GOLD: %i", p.getName().c_str(), p.getGold()), 20, 20, 20, GOLD);
+
+        int xPos = 20;
+        for (auto& z : world) {
+            // Desenare teren
+            DrawRectangle(xPos, 80, 370, 500, z.getTerrain().getTint());
+            DrawRectangleLines(xPos, 80, 370, 500, WHITE);
+            DrawText(z.getName().c_str(), xPos + 10, 90, 22, BLACK);
+            DrawText(TextFormat("Type: %s (Atk x%.1f)", z.getTerrain().getType().c_str(), z.getTerrain().getAtkMod()), xPos + 10, 115, 16, DARKGRAY);
+
+            // Unități
+            int yPos = 150;
+            for (const auto& u : z.getUnits()) {
+                DrawRectangle(xPos + 10, yPos, 350, 40, Fade(BLACK, 0.5f));
+                float hpW = (float)u.getHP() / u.getMaxHP() * 100;
+                DrawRectangle(xPos + 15, yPos + 30, (int)hpW, 5, u.getColor());
+                DrawText(u.getName().c_str(), xPos + 20, yPos + 10, 18, WHITE);
+                yPos += 50;
+            }
+
+            // Log-uri
+            int logY = 450;
+            auto logs = z.getLogs();
+            int count = 0;
+            for(auto it = logs.rbegin(); it != logs.rend() && count < 4; ++it, ++count) {
+                DrawText(it->c_str(), xPos + 10, logY + (count * 15), 13, RAYWHITE);
+            }
+            xPos += 390;
+        }
+
+        DrawText("SPACE: Fight | G: Collect Gold", 250, 580, 18, LIGHTGRAY);
+    }
+
+    void handleEvents() {
+        if (IsKeyPressed(KEY_SPACE)) {
+            for (auto& z : world) z.processBattle();
+        }
+        if (IsKeyPressed(KEY_G)) {
+            int total = 0;
+            for (const auto& z : world) total += z.getIncome();
+            p.addGold(total);
+            std::cout << "Colected " << total << " gold from buildings.\n";
+        }
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Game& g) {
+        return os << "Game state for " << g.p.getName() << " | Zones: " << g.world.size();
+    }
+};
+
+// ==========================================
+// 8. MAIN
 // ==========================================
 int main() {
-    // Configurare fereastră Raylib (C standard)
-    InitWindow(800, 600, "Empire Rising v0.1");
+    InitWindow(800, 600, "Empire Rising: Advanced OOP");
     SetTargetFPS(60);
 
-    Game engine(Player("Stefan", 500));
-    engine.init();
-
-    std::cout << "Game started. Use SPACE to battle, S to buy, E to equip.\n";
+    Game engine(Player("Stefan", 100));
+    engine.setup();
 
     while (!WindowShouldClose()) {
-        engine.handleInput();
-
+        engine.handleEvents();
         BeginDrawing();
-        engine.draw();
+        engine.render();
         EndDrawing();
     }
 
