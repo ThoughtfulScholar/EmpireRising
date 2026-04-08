@@ -502,6 +502,9 @@ public:
             [](const Unit& u){ return !u.isAlive(); }), garrison.end());
     }
 };
+
+
+
 // ===========================================================
 // PARTEA 5: MANAGEMENT, STATISTICI ȘI SIMULARE FINALĂ
 // ===========================================================
