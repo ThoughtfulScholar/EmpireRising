@@ -456,15 +456,32 @@ private:
     }
 
     void initWorld() {
+        // Regiunea 1
         Garrison g1("Garda de Fier");
         g1.addDefender(Unit("Infanterist Veteran", UnitType::INFANTERIE, Ability("Blocaj", 0.2f, 10)));
         g1.addDefender(Unit("Arcas Cetate", UnitType::ARCASI, Ability("Foc", 0.15f, 20)));
 
+        // Regiunea 2
         Garrison g2("Legiunea Neagra");
         g2.addDefender(Unit("Cavaler Greu", UnitType::CAVALERIE, Ability("Sarja", 0.3f, 40)));
 
+        // --- ORASE NOI ADAUGATE ---
+
+        // Regiunea 3 - Arhipelagul de Sud
+        Garrison g3("Piratii de Smarald");
+        g3.addDefender(Unit("Arcas Maritim", UnitType::ARCASI, Ability("Sageata Otravita", 0.35f, 15)));
+        g3.addDefender(Unit("Infanterie Usoara", UnitType::INFANTERIE, Ability("Evadare", 0.2f, 5)));
+
+        // Regiunea 4 - Citadela Inhetata
+        Garrison g4("Garda Inhetata");
+        g4.addDefender(Unit("Garda de Elita", UnitType::INFANTERIE, Ability("Inghet", 0.4f, 25)));
+        g4.addDefender(Unit("Cavaler de Nord", UnitType::CAVALERIE, Ability("Avalansa", 0.3f, 50)));
+
+        // Popularea hartii
         worldMap.emplace_back("Valea Sperantei", City("Veridonia", 200), g1, GREEN);
         worldMap.emplace_back("Muntii de Fier", City("Ironhold", 350), g2, DARKGRAY);
+        worldMap.emplace_back("Coasta de Azur", City("Port Royal", 280), g3, BLUE);
+        worldMap.emplace_back("Tundra Oarba", City("Frosthelm", 450), g4, SKYBLUE);
     }
 
 public:
