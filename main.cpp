@@ -54,7 +54,6 @@ namespace GameEngine {
 
 enum class UnitType { INFANTERIE, ARCASI, CAVALERIE, GARDA_CETATE };
 enum class GameState { LOGIN, SIMULATION, VICTORIE };
-
 struct UnitClassData {
     std::string className;
     int baseHp, baseAtk, baseDef, cost;
@@ -76,6 +75,7 @@ public:
         }
     }
 };
+
 /**
  * @class Ability
  * Reprezinta o tehnica de lupta folosita in momente critice.
@@ -134,17 +134,27 @@ public:
 
     // --- RULE OF THREE ---
     Unit(const Unit& other) = default;
-    Unit& operator=(const Unit& other) = default;
+    Unit& operator=(const Unit& other) {
+        if (this != &other) {
+            name = other.name;
+            type = other.type;
+            hp = other.hp;
+            maxHp = other.maxHp;
+            atk = other.atk;
+            def = other.def;
+            level = other.level;
+            xp = other.xp;
+            specialAbility = other.specialAbility;
+        }
+        return *this;
+    }
     ~Unit() = default;
 
-    // --- LOGICA COMPLEXA ---
     [[nodiscard]] int calculateTotalAttack() const {
-        // Foloseste sansa aleatorie a abilitatii
         return atk + specialAbility.trigger() + (level * 7);
     }
 
     [[nodiscard]] int getBaseAttackPower() const {
-        // Valoare stabila pentru afisare in UI (fara trigger aleator)
         return atk + (level * 7);
     }
 
@@ -177,12 +187,7 @@ public:
 };
 /**
  * @class City
- * Gestioneaza economia asezarii. Exemplu de clasa cu logica de upgrade.
- */
-/**
- * @class City
  * Gestioneaza economia, populatia si nivelul de dezvoltare.
- * Exemplu de clasa cu logica economica complexa.
  */
 class City {
 private:
@@ -197,6 +202,9 @@ public:
         : cityName(std::move(name)), cityLevel(1), baseIncome(income),
           population(100), occupied(false) {}
 
+    /**
+     * @brief Calculeaza taxele bazate pe nivel si populatie.
+     */
     [[nodiscard]] int collectTaxes() const {
         if (!occupied) return 0;
         float efficiency = 1.0f + (static_cast<float>(cityLevel) * 0.2f);
@@ -207,14 +215,20 @@ public:
         return 300 * cityLevel + (cityLevel * cityLevel * 45) + (population / 5);
     }
 
+    /**
+     * @brief Upgrade-ul creste nivelul si ofera un boom demografic.
+     */
     void upgrade() {
         cityLevel++;
-        population += 50 * cityLevel;
+        population += 50 * cityLevel; // Bonus de populatie la upgrade
     }
 
+    /**
+     * @brief Simuleaza cresterea organica a populatiei.
+     */
     void simulateGrowth() {
         if (occupied) {
-            population += 5 + (cityLevel * 2);
+            population += 5 + (cityLevel * 2); // Crestere zilnica
         }
     }
 
@@ -257,7 +271,6 @@ public:
         return soldiers.empty() ? nullptr : &soldiers[0];
     }
 
-    // Operator afisare - apeleaza operator<< al clasei Unit
     friend std::ostream& operator<<(std::ostream& os, const Garrison& g) {
         os << "Garnizoana " << g.faction << " cu " << g.soldiers.size() << " trupe";
         return os;
@@ -265,7 +278,6 @@ public:
 
     [[nodiscard]] const std::vector<Unit>& getSoldiers() const { return soldiers; }
 };
-
 /**
  * @class Player
  * Reprezinta utilizatorul si resursele sale.
@@ -298,7 +310,6 @@ public:
 
     void earnGold(int amount) { gold += amount; }
 
-    // Operator afisare pentru Player
     friend std::ostream& operator<<(std::ostream& os, const Player& p) {
         os << "Comandantul << " << p.commanderName << " >> (Aur: " << p.gold << ")";
         return os;
@@ -308,6 +319,7 @@ public:
     [[nodiscard]] const std::string& getName() const { return commanderName; }
     [[nodiscard]] std::vector<Unit>& getArmy() { return army; }
 };
+
 /**
  * @class Zone
  * Reprezinta o regiune strategica. Exemplu de COMPUNERE (City + Garrison).
@@ -324,9 +336,6 @@ public:
         : zoneName(std::move(name)), localCity(std::move(city)),
           enemyGarrison(std::move(garrison)), mapTint(tint) {}
 
-    /**
-     * @brief Functie complexa: Simuleaza logica de asediu cu faze de atac si riposta.
-     */
     [[nodiscard]] std::string executeBattleRound(Player& player) {
         if (enemyGarrison.isDefeated()) {
             localCity.setOccupied(true);
@@ -338,7 +347,7 @@ public:
         auto& pUnit = player.getArmy().front();
         auto* eUnit = enemyGarrison.getFrontUnit();
 
-        // Faza de atac a jucatorului
+        // Atacul jucatorului
         int pAtk = pUnit.calculateTotalAttack();
         eUnit->takeDamage(pAtk);
         std::string log = pUnit.getName() + " loveste cu " + std::to_string(pAtk) + ". ";
@@ -353,14 +362,13 @@ public:
             return log + "Inamic eliminat.";
         }
 
-        // Faza de riposta a inamicului
+        // Riposta inamicului
         int eAtk = eUnit->calculateTotalAttack();
         pUnit.takeDamage(eAtk);
         player.updateArmyStatus();
         return log + "Inamicul riposteaza cu " + std::to_string(eAtk) + ".";
     }
 
-    // Operator afisare - Compunere de apeluri (apeleaza City si Garrison)
     friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
         os << "REGIUNE: << " << z.zoneName << " >> | " << z.localCity << " | " << z.enemyGarrison;
         return os;
@@ -375,7 +383,6 @@ public:
 
 /**
  * @class RecruitmentCenter
- * Gestioneaza angajarea trupelor.
  */
 class RecruitmentCenter {
 public:
@@ -394,10 +401,9 @@ public:
         }
     }
 };
-
 /**
  * @class LoginManager
- * Gestioneaza ecranul de autentificare si input-ul numelui.
+ * Gestioneaza ecranul de autentificare. Optimizat pentru a evita copii inutile.
  */
 class LoginManager {
 private:
@@ -428,10 +434,12 @@ public:
     [[nodiscard]] bool isAuthenticated() const { return authenticated; }
 
     /**
-     * @brief Returneaza numele prin referinta constanta pentru performanta.
+     * @brief Rezolvare eroare [returnByReference].
+     * Returneaza referinta constanta pentru a evita copierea std::string.
      */
     [[nodiscard]] const std::string& getPlayerName() const { return inputBuffer; }
 };
+
 /**
  * @class Simulation
  * Coordoneaza fluxul principal al jocului. Exemplu de compunere masiva.
@@ -446,12 +454,9 @@ private:
     std::vector<Zone> worldMap;
 
     int activeZoneIdx = 0;
-    int gameDay = 1; // Utilizat acum in logica de taxe
+    int gameDay = 1;
     bool showRecruitment = false;
 
-    /**
-     * @brief Functie complexa: Verifica victoria prin iterarea hartii.
-     */
     [[nodiscard]] bool checkVictory() const {
         return std::ranges::all_of(worldMap, [](const auto& z) {
             return z.getCity().isOccupied();
@@ -477,11 +482,11 @@ public:
         SetTargetFPS(60);
         initWorld();
     }
-
     void handleInput() {
         if (currentState == GameState::LOGIN) {
             loginUI.update();
             if (loginUI.isAuthenticated()) {
+                // Transferam numele prin valoare o singura data pentru a initia jucatorul
                 player = Player(loginUI.getPlayerName(), 1500);
                 currentState = GameState::SIMULATION;
             }
@@ -494,14 +499,14 @@ public:
 
         auto& currentZone = worldMap[static_cast<size_t>(activeZoneIdx)];
 
-        // Logica complexa de Upgrade
+        // Logica de Upgrade: Creste nivelul si populatia
         if (IsKeyPressed(KEY_U) && currentZone.getCity().isOccupied()) {
             int cost = currentZone.getCity().getUpgradeCost();
             if (player.spendGold(cost)) {
                 currentZone.getCity().upgrade();
-                logger.add("Upgrade reusit: " + currentZone.getCity().getName() + " a ajuns la nivelul " + std::to_string(currentZone.getCity().getLevel()));
+                logger.add("Upgrade reusit: " + currentZone.getCity().getName() + " (Nivel " + std::to_string(currentZone.getCity().getLevel()) + ")");
             } else {
-                logger.add("Fonduri insuficiente! Ai nevoie de " + std::to_string(cost) + " aur.");
+                logger.add("Fonduri insuficiente! Necesari: " + std::to_string(cost) + " aur.");
             }
         }
 
@@ -511,12 +516,12 @@ public:
             if (checkVictory()) currentState = GameState::VICTORIE;
         }
 
-        // Logica Zi Noua (Taxe si Crestere Orase)
+        // Logica Zi Noua: Colectare taxe si cresterea populatiei
         if (IsKeyPressed(KEY_N)) {
             gameDay++;
             int taxesTotal = 0;
             for (auto& z : worldMap) {
-                z.getCity().simulateGrowth(); // Crestere populatie
+                z.getCity().simulateGrowth(); // Populatia creste organic
                 taxesTotal += z.getCity().collectTaxes();
             }
             player.earnGold(taxesTotal);
@@ -547,13 +552,13 @@ public:
             const auto& zone = worldMap[static_cast<size_t>(activeZoneIdx)];
             const auto& city = zone.getCity();
 
-            // --- 1. HEADER ---
+            // --- HEADER ---
             DrawRectangle(0, 0, 1600, 140, GameEngine::ColorPalette::UIBack());
             raylib::Text::Draw("COMANDANT: " + player.getName(), 50, 40, 35, WHITE);
             raylib::Text::Draw("TEZAUR: " + std::to_string(player.getGold()) + " AUR", 50, 90, 25, GameEngine::ColorPalette::Gold());
             raylib::Text::Draw("ZIUA: " + std::to_string(gameDay), 1400, 40, 30, LIGHTGRAY);
 
-            // --- 2. PANOU CENTRAL ---
+            // --- PANOU CENTRAL ---
             DrawRectangle(50, 160, 950, 500, zone.getTint().Alpha(0.15f));
             raylib::Text::Draw("REGIUNEA: << " + zone.getName() + " >>", 80, 190, 45, BLACK);
 
@@ -561,9 +566,7 @@ public:
                 raylib::Text::Draw("AMENINTARE PREZENTA:", 80, 320, 25, GameEngine::ColorPalette::Enemy());
                 int ey = 360;
                 for (const auto& e : zone.getGarrison().getSoldiers()) {
-                    // Utilizam getBaseAttackPower() pentru a opri fluctuatia cifrelor
-                    std::string enemyStr = "- " + e.getName() + " | HP: " + std::to_string(e.getHP()) +
-                                           " | Forta: " + std::to_string(e.getBaseAttackPower());
+                    std::string enemyStr = "- " + e.getName() + " | HP: " + std::to_string(e.getHP()) + " | Forta: " + std::to_string(e.getBaseAttackPower());
                     raylib::Text::Draw(enemyStr, 100, ey, 20, DARKGRAY);
                     ey += 30;
                 }
@@ -577,7 +580,7 @@ public:
                 raylib::Text::Draw("Cost Upgrade [U]: " + std::to_string(cost) + " Aur (Nivel " + std::to_string(city.getLevel()) + ")", 80, 400, 25, upgColor);
             }
 
-            // --- 3. MENIU RECRUTARE ---
+            // --- RECRUTARE & TRUPE ---
             if (showRecruitment) {
                 DrawRectangle(1050, 160, 500, 420, raylib::Color::RayWhite().Alpha(0.9f));
                 DrawRectangleLines(1050, 160, 500, 420, DARKBLUE);
@@ -585,18 +588,17 @@ public:
                 raylib::Text::Draw("1. Infanterie (120g)\n2. Arcasi (150g)\n3. Cavalerie (250g)", 1080, 240, 22, BLACK);
             }
 
-            // --- 4. ARMATA PROPRIE ---
+            // --- ARMATA ---
             raylib::Text::Draw("TRUPELE TALE:", 50, 680, 25, DARKBLUE);
             int py = 720;
             for (const auto& u : player.getArmy()) {
                 DrawRectangle(50, py, 450, 45, GameEngine::ColorPalette::Sky());
-                std::string unitStats = u.getName() + " [Lvl " + std::to_string(u.getLevel()) +
-                                       "] HP: " + std::to_string(u.getHP()) + "/" + std::to_string(u.getMaxHP());
+                std::string unitStats = u.getName() + " [Lvl " + std::to_string(u.getLevel()) + "] HP: " + std::to_string(u.getHP()) + "/" + std::to_string(u.getMaxHP());
                 raylib::Text::Draw(unitStats, 70, py + 12, 18, WHITE);
                 py += 55; if (py > 1100) break;
             }
 
-            // --- 5. CONSOLA EVENIMENTE ---
+            // --- LOGGER ---
             DrawRectangle(1050, 680, 500, 440, BLACK);
             int ly = 700;
             for (const auto& m : logger.getMessages()) {
@@ -604,7 +606,7 @@ public:
                 ly += 25;
             }
 
-            // --- 6. BARA DE EXPLICATII (FOOTER) ---
+            // --- FOOTER ---
             DrawRectangle(0, 1150, 1600, 50, GameEngine::ColorPalette::UIBack());
             raylib::Text::Draw("[N] Zi Noua (Taxe) | [F] Lupta | [U] Upgrade | [R] Meniu Recrutare | [TAB] Schimba Zona", 280, 1165, 20, WHITE);
         }
@@ -613,27 +615,44 @@ public:
 
     void run() { while (!window.ShouldClose()) { handleInput(); render(); } }
 };
-
+/**
+ * @brief Punctul de intrare in aplicatie.
+ * Contine teste pentru functionalitatile cerute la Tema 1:
+ * - Operatori supraîncărcați (<<)
+ * - Rule of Three (prin copierea de unitati)
+ * - Compunere (Zone -> City, Garrison)
+ */
 int main() {
-    // SCENARIU DE UTILIZARE - TEMA 1
-    std::cout << "--- EMPIRE RISING: TESTARE OPERATORI ---" << std::endl;
+    // 1. TESTARE OPERATORI ȘI RULE OF THREE (Consolă)
+    std::cout << "--- EMPIRE RISING: TESTARE CERINTE TEMA 1 ---" << std::endl;
 
+    // Test Rule of Three (Copy Constructor & Assignment)
     Ability ab("Sarja", 0.5f, 30);
-    Unit u1("Garda", UnitType::CAVALERIE, ab);
-    std::cout << u1 << std::endl; // Test operator<< Unit (apeleaza << Ability)
+    Unit u1("Garda Imperiala", UnitType::CAVALERIE, ab);
+    Unit u2 = u1; // Copy Constructor
+    Unit u3("Infanterie", UnitType::INFANTERIE, Ability());
+    u3 = u2;      // Copy Assignment
 
-    City c1("Veridonia", 200);
-    Garrison g1("Legiune");
+    std::cout << "Original: " << u1 << std::endl;
+    std::cout << "Copie:    " << u3 << std::endl;
+
+    // Test Compunere si Operatori Afisare
+    City c1("Veridonia", 250);
+    c1.setOccupied(true);
+    Garrison g1("Legiunea a IV-a");
     g1.addDefender(u1);
 
-    Zone z1("Valea", c1, g1, GREEN);
-    std::cout << z1 << std::endl; // Test operator<< Zone (apeleaza << City si << Garrison)
+    Zone z1("Valea Sperantei", c1, g1, GREEN);
+    std::cout << "Test Compunere Zone: " << z1 << std::endl;
 
+    std::cout << "\n--- LANSARE INTERFATA GRAFICA ---" << std::endl;
+
+    // 2. LANSARE SIMULARE
     try {
         Simulation game;
         game.run();
     } catch (const std::exception& e) {
-        std::cerr << "Eroare: " << e.what() << std::endl;
+        std::cerr << "Eroare critica in executie: " << e.what() << std::endl;
         return 1;
     }
 
