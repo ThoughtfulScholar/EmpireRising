@@ -458,6 +458,7 @@ public:
             [](const Unit& u){ return !u.isAlive(); }), garrison.end());
     }
 };
+
 // ===========================================================
 // PARTEA 5: MANAGEMENT, STATISTICI ȘI SIMULARE FINALĂ
 // ===========================================================
@@ -511,6 +512,8 @@ private:
 public:
     explicit Achievement(std::string n) : name(std::move(n)) {}
     void unlock() { if(!unlocked) { unlocked = true; std::cout << " [REALIZARE] " << name << "!\n"; } }
+    
+    // Cppcheck fix: status() este acum apelată în performAudit()
     [[nodiscard]] bool status() const { return unlocked; }
 };
 
@@ -563,13 +566,11 @@ public:
             auto c = t.getTint();
             if (c.r + c.g + c.b + c.a > 0) systemLogger.add("Audit Teren: " + t.getDesc());
             
-            // Cppcheck fix: Declaram 'u' ca referinta const (constVariableReference)
             for (const auto& u : z.getGarrison()) {
                 if (u.getHP() < u.getMaxHP()) {
                     systemLogger.add("Unitate rănită: " + u.getName() + " Lvl:" + std::to_string(u.getLevel()));
                 }
                 
-                // Cppcheck fix: Folosim getGear() aici
                 const Item& unitGear = u.getGear();
                 if (unitGear.getAtk() > 0) systemLogger.add("Echipament detectat pe " + u.getName());
 
@@ -589,9 +590,13 @@ public:
         for (const auto& q : quests) {
             if (!q.isDone()) {
                 (void)q.getReward();
-                // Cppcheck fix: Folosim getGoal() aici
                 systemLogger.add("Obiectiv Quest: " + q.getGoal());
             }
+        }
+
+        // Cppcheck fix: Apelăm status() pentru a verifica realizările
+        for (const auto& t : trophies) {
+            if (t.status()) systemLogger.add("Realizare activă detectată.");
         }
     }
 
@@ -615,7 +620,6 @@ public:
 
         cityMarket.refreshStock();
         if (player.getGold() > 50 && !cityMarket.getCatalog().empty()) {
-            // Cppcheck fix: logExpense() apelat corect prin calcularea diferentei de aur
             int goldBefore = player.getGold();
             cityMarket.handlePurchase(player, 0);
             int cost = goldBefore - player.getGold();
