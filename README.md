@@ -1,16 +1,14 @@
 # EmpireRising
-Empire Rising este un simulator de strategie și gestiune dezvoltat în C++, ce pune bazele unui univers de cucerire și expansiune. Programul orchestrează interacțiunea dintre forța militară, stabilitatea economică și deciziile diplomatice într-un sistem dinamic bazat pe tururi.
+**Empire Rising** este un simulator de strategie și gestiune dezvoltat în C++, ce pune bazele unui univers de cucerire și expansiune. Programul orchestrează interacțiunea dintre forța militară, stabilitatea economică și deciziile diplomatice într-un sistem dinamic bazat pe tururi.
 
-Pilonii Jocului:
-Comandă Militară: Gestionezi unități cu ierarhii de nivel, clase tactice și abilități declanșate de probabilități.
+### 🏛️ Pilonii Jocului:
 
-Sistem Economic: Piață de echipamente, gestionarea aurului și un tezaur securizat pentru obiecte de legendă.
+* **Comandă Militară:** Gestionezi unități cu ierarhii de nivel, clase tactice și abilități speciale declanșate de probabilități pe câmpul de luptă.
+* **Sistem Economic:** Administrezi o piață de echipamente, fluxul de aur al imperiului și un tezaur securizat pentru obiectele de legendă.
+* **Lume Vie:** Confruntări influențate de teren, misiuni evolutive și relații diplomatice ce pendulează între alianțe strategice și război total.
+* **Evenimente Globale:** Fenomene aleatorii care apar neașteptat, forțând adaptarea strategiei la nivelul întregului imperiu.
 
-Lume Vie: Conflicte influențate de teren, misiuni evolutive și relații diplomatice ce pendulează între alianță și război.
-
-Evenimente Globale: Evenimente aleatorii care forțează adaptarea strategiei la nivelul întregului imperiu.
-
-Empire Rising nu este doar un cod, ci un motor de simulare unde deciziile administrative și victoriile pe câmpul de luptă clădesc drumul spre o hegemonie absolută.
+**Empire Rising** nu este doar un cod, ci un motor de simulare unde deciziile administrative și victoriile pe câmpul de luptă clădesc drumul spre o hegemonie absolută.
 ### Folosiți template-ul corespunzător grupei voastre!
 
 | Laborant  | Link template                                |
