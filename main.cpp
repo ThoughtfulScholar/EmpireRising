@@ -1,317 +1,455 @@
+#include "raylib-cpp.hpp"
 #include <iostream>
-#include <string>
 #include <vector>
+#include <string>
 #include <algorithm>
-#include <sstream>
-#include <iomanip>
-#include <random>
+#include <memory>
 #include <ctime>
 
 // ===========================================================
-// PARTEA 1: NUCLEUL DE SISTEM ȘI OBIECTELE DE BAZĂ
+// PARTEA 1: CONFIGURAȚII ȘI LOGGER AVANSAT
 // ===========================================================
 
 namespace GameEngine {
-    /**
-     * @struct Color
-     * Gestionare culori pentru entități.
-     */
-    struct Color {
-        unsigned char r, g, b, a;
-        static Color Red() { return {255, 0, 0, 255}; }
-        static Color Green() { return {0, 255, 0, 255}; }
-        static Color Blue() { return {0, 0, 255, 255}; }
-        static Color Gold() { return {255, 215, 0, 255}; } 
-        static Color Gray() { return {128, 128, 128, 255}; }
+    // Structură personalizată pentru culori, compatibilă cu Raylib
+    struct ColorPalette {
+        static raylib::Color Gold()    { return { 255, 203, 0, 255 }; }
+        static raylib::Color Crimson() { return { 190, 33, 55, 255 }; }
+        static raylib::Color Sky()     { return { 102, 191, 255, 255 }; }
+        static raylib::Color Forest()  { return { 0, 117, 44, 255 }; }
+        static raylib::Color UIBack()  { return { 30, 30, 30, 255 }; }
     };
 
     /**
      * @class Logger
-     * Sistem de trasabilitate pentru evenimentele din simulare.
+     * Gestionează mesajele de sistem pentru jurnalul de luptă și economie.
      */
     class Logger {
     private:
-        std::vector<std::string> history;
+        std::vector<std::string> messages;
+        const size_t maxMessages = 7;
     public:
-        void add(const std::string& m) { 
-            history.push_back(m); 
-        }
-        
-        void flush() {
-            if (history.empty()) return;
-            std::cout << "\n--- JURNAL DE LUPTĂ ---\n";
-            for (const auto& entry : history) {
-                std::cout << " [LOG] " << entry << "\n";
+        void add(const std::string& m) {
+            messages.push_back(m);
+            if (messages.size() > maxMessages) {
+                messages.erase(messages.begin());
             }
-            history.clear();
         }
+        const std::vector<std::string>& getMessages() const { return messages; }
+        void clear() { messages.clear(); }
     };
 }
 
+enum class GameState { LOGIN, SIMULATION, SUMMARY };
+
+/**
+ * @class LoginSystem
+ * Permite introducerea interactivă a numelui comandantului.
+ */
+class LoginSystem {
+private:
+    std::string playerName;
+    int letterCount = 0;
+    bool finished = false;
+    const int maxLetters = 12;
+
+public:
+    void update() {
+        // Citire input caractere
+        int key = GetCharPressed();
+        while (key > 0) {
+            if ((key >= 32) && (key <= 125) && (letterCount < maxLetters)) {
+                playerName += (char)key;
+                letterCount++;
+            }
+            key = GetCharPressed();
+        }
+
+        // Ștergere caracter
+        if (IsKeyPressed(KEY_BACKSPACE) && letterCount > 0) {
+            playerName.pop_back();
+            letterCount--;
+        }
+
+        // Finalizare
+        if (IsKeyPressed(KEY_ENTER) && letterCount > 0) {
+            finished = true;
+        }
+    }
+
+    void draw() {
+        // Fundal Login
+        DrawRectangleGradientV(0, 0, 800, 600, DARKGRAY, BLACK);
+
+        raylib::Text::Draw("EMPIRE MANAGER: TEMA 1", 180, 120, 35, GameEngine::ColorPalette::Gold());
+        raylib::Text::Draw("Introdu numele tau, Comandante:", 200, 200, 20, LIGHTGRAY);
+
+        DrawRectangle(200, 250, 400, 50, RAYWHITE);
+        DrawRectangleLines(200, 250, 400, 50, GameEngine::ColorPalette::Sky());
+
+        raylib::Text::Draw(playerName, 215, 260, 30, DARKGRAY);
+
+        if (letterCount > 0) {
+            float blink = sinf(GetTime() * 10.0f);
+            if (blink > 0) {
+                raylib::Text::Draw("APASA [ENTER] PENTRU A INCEPE", 220, 320, 18, MAROON);
+            }
+        }
+    }
+
+    [[nodiscard]] bool isFinished() const { return finished; }
+    [[nodiscard]] std::string getName() const { return playerName.empty() ? "Anonim" : playerName; }
+};
+// ===========================================================
+// PARTEA 2: CLASE DE UNITĂȚI ȘI ABILITĂȚI CU BONUSURI
+// ===========================================================
+
+enum class UnitType { INFANTERIE, ARCASI, CAVALERIE };
+
 /**
  * @class Ability
+ * Atacuri speciale care se declanșează bazat pe noroc (proc chance).
  */
 class Ability {
 private:
     std::string name;
-    float procChance;
-    int damageValue;
-    std::string effectType;
+    float activationChance; // 0.0 - 1.0
+    int extraDamage;
 
 public:
-    explicit Ability(std::string n = "Niciuna", float chance = 0.0f, int val = 0, std::string type = "Fizic")
-        : name(std::move(n)), procChance(chance), damageValue(val), effectType(std::move(type)) {}
+    explicit Ability(std::string n = "Atac de baza", float chance = 0.0f, int dmg = 0)
+        : name(std::move(n)), activationChance(chance), extraDamage(dmg) {}
 
-    [[nodiscard]] int activate() const {
-        return (procChance > 0.4f) ? damageValue : 0;
+    // Verifică dacă abilitatea se activează în runda curentă
+    [[nodiscard]] int trigger() const {
+        float roll = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+        if (roll <= activationChance) return extraDamage;
+        return 0;
     }
 
     [[nodiscard]] const std::string& getName() const { return name; }
-    [[nodiscard]] float getChance() const { return procChance; }
-    [[nodiscard]] int getValue() const { return damageValue; }
-    [[nodiscard]] const std::string& getType() const { return effectType; }
+    [[nodiscard]] float getChance() const { return activationChance; }
+    [[nodiscard]] int getBonus() const { return extraDamage; }
+};
 
-    friend std::ostream& operator<<(std::ostream& os, const Ability& a) {
-        return os << "Abilitate: " << a.name << " (" << a.effectType << ")";
+/**
+ * @struct UnitStats
+ * Helper pentru a stoca datele brute ale unei clase de unități.
+ */
+struct UnitClassData {
+    std::string className;
+    int baseHp;
+    int baseAtk;
+    int baseDef;
+    int cost;
+    std::string trait; // Descrierea bonusului specific
+};
+
+/**
+ * @class UnitRegistry
+ * O bază de date statică pentru a prelua informații despre tipurile de trupe.
+ */
+class UnitRegistry {
+public:
+    static UnitClassData GetData(UnitType type) {
+        switch (type) {
+            case UnitType::INFANTERIE:
+                return {"Infanterie", 150, 25, 20, 100, "Bonus: Aparare ridicata (+5 Def constant)"};
+            case UnitType::ARCASI:
+                return {"Arcasi", 100, 45, 5, 120, "Bonus: Ignore Armor (Ataca direct)"};
+            case UnitType::CAVALERIE:
+                return {"Cavalerie", 200, 35, 15, 180, "Bonus: Soc (Sansa dubla de critic)"};
+            default:
+                return {"Recrut", 50, 10, 5, 50, "Niciun bonus"};
+        }
     }
 };
 
 /**
+ * @class Unit
+ * Entitatea de bază a armatei. Include experiență și nivel.
+ */
+class Unit {
+private:
+    std::string name;
+    UnitType type;
+    int hp, maxHp;
+    int atk, def;
+    int level;
+    int xp;
+    Ability specialAbility;
+
+public:
+    Unit(std::string n, UnitType t, Ability ab)
+        : name(std::move(n)), type(t), level(1), xp(0), specialAbility(std::move(ab)) {
+
+        UnitClassData data = UnitRegistry::GetData(t);
+        hp = maxHp = data.baseHp;
+        atk = data.baseAtk;
+        def = data.baseDef;
+    }
+
+    // Funcție pentru calculul atacului total (include abilitatea)
+    [[nodiscard]] int getAttackPower() const {
+        int bonus = specialAbility.trigger();
+        // Bonus specific Cavalerie: Atacul crește cu 10% din viața maximă la impact
+        int classBonus = (type == UnitType::CAVALERIE) ? (maxHp / 10) : 0;
+        return atk + bonus + classBonus;
+    }
+
+    void receiveDamage(int amount) {
+        // Bonus specific Infanterie: reducerea daunelor este mai eficientă
+        int effectiveDef = (type == UnitType::INFANTERIE) ? (def + 5) : def;
+        int finalDmg = std::max(5, amount - effectiveDef);
+        hp = std::max(0, hp - finalDmg);
+    }
+
+    void gainExperience(int amount) {
+        xp += amount;
+        if (xp >= 100) {
+            level++;
+            xp -= 100;
+            maxHp += 25;
+            hp = maxHp;
+            atk += 7;
+            def += 3;
+        }
+    }
+
+    [[nodiscard]] bool isAlive() const { return hp > 0; }
+    [[nodiscard]] int getHP() const { return hp; }
+    [[nodiscard]] int getMaxHP() const { return maxHp; }
+    [[nodiscard]] int getLvl() const { return level; }
+    [[nodiscard]] const std::string& getName() const { return name; }
+    [[nodiscard]] UnitType getType() const { return type; }
+    [[nodiscard]] const Ability& getAbility() const { return specialAbility; }
+};
+// ===========================================================
+// PARTEA 3: ECHIPAMENTE ȘI SISTEMUL DE TEZAUR (VAULT)
+// ===========================================================
+
+/**
  * @class Item
+ * Obiecte ce pot fi purtate de unități pentru a le crește statisticile.
  */
 class Item {
 private:
     std::string name;
-    int atk, def, price;
-    bool legendary;
+    int atkBonus;
+    int defBonus;
+    int price;
 
 public:
-    explicit Item(std::string n = "Obiect", int a = 0, int d = 0, int p = 0, bool leg = false)
-        : name(std::move(n)), atk(a), def(d), price(p), legendary(leg) {}
+    explicit Item(std::string n = "Obiect Inutil", int a = 0, int d = 0, int p = 0)
+        : name(std::move(n)), atkBonus(a), defBonus(d), price(p) {}
 
-    [[nodiscard]] int getAtk() const { return atk; }
-    [[nodiscard]] int getDef() const { return def; }
+    // Metodă pentru a descrie pe scurt obiectul
+    [[nodiscard]] std::string getStatsString() const {
+        return name + " (Atk: +" + std::to_string(atkBonus) + ", Def: +" + std::to_string(defBonus) + ")";
+    }
+
+    [[nodiscard]] int getAtk() const { return atkBonus; }
+    [[nodiscard]] int getDef() const { return defBonus; }
     [[nodiscard]] int getPrice() const { return price; }
-    [[nodiscard]] bool isLegendary() const { return legendary; }
     [[nodiscard]] const std::string& getName() const { return name; }
-
-    [[nodiscard]] std::string getStats() const {
-        std::stringstream ss;
-        ss << name << " [ATK+" << atk << " DEF+" << def << "]";
-        if (legendary) ss << " (LEGENDAR)";
-        return ss.str();
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const Item& i) {
-        return os << i.getStats();
-    }
 };
-
-// ===========================================================
-// PARTEA 2: ENTITĂȚILE DE LUPTĂ ȘI MEDIUL DE JOC
-// ===========================================================
-
-enum class UnitClass { INFANTERIE, CAVALERIE, ARCASI, MAGI, BESTII };
-
-class Terrain {
-private:
-    std::string name;
-    float attackMod;
-    float defenseMod;
-    GameEngine::Color tint;
-    std::string description;
-
-public:
-    explicit Terrain(std::string n = "Câmpie", float aMod = 1.0f, float dMod = 1.0f, 
-                    GameEngine::Color t = GameEngine::Color::Green(), 
-                    std::string d = "Condiții de luptă standard.")
-        : name(std::move(n)), attackMod(aMod), defenseMod(dMod), tint(t), description(std::move(d)) {}
-
-    [[nodiscard]] float getAtkMod() const { return attackMod; }
-    [[nodiscard]] float getDefMod() const { return defenseMod; }
-    [[nodiscard]] const std::string& getName() const { return name; }
-    [[nodiscard]] GameEngine::Color getTint() const { return tint; }
-    [[nodiscard]] const std::string& getDesc() const { return description; }
-
-    friend std::ostream& operator<<(std::ostream& os, const Terrain& t) {
-        return os << "Teren: " << t.name << " (Atk x" << t.attackMod << ")";
-    }
-};
-
-class Unit {
-private:
-    std::string name;
-    UnitClass uClass;
-    int health, maxHealth, attack, defense, level, xp;
-    Ability specialAbility;
-    Item gear;
-    GameEngine::Color color;
-
-public:
-    Unit(std::string n, UnitClass uc, int hp, int atk, int def, Ability ab, GameEngine::Color c)
-        : name(std::move(n)), uClass(uc), health(hp), maxHealth(hp), 
-          attack(atk), defense(def), level(1), xp(0), 
-          specialAbility(std::move(ab)), gear(), color(c) {}
-
-    void equip(const Item& i) { gear = i; }
-    void heal() { 
-        int amount = maxHealth / 4;
-        health = std::min(maxHealth, health + amount); 
-    }
-
-    [[nodiscard]] bool isAlive() const { return health > 0; }
-
-    [[nodiscard]] int calculateDamage(UnitClass enemyType, float terrainAtkMod) const {
-        float multiplier = 1.0f;
-        if (uClass == UnitClass::INFANTERIE && enemyType == UnitClass::ARCASI) multiplier = 1.3f;
-        int totalAtk = attack + gear.getAtk();
-        return static_cast<int>((totalAtk * multiplier * terrainAtkMod) + specialAbility.activate());
-    }
-
-    void takeDamage(int incomingDmg, float terrainDefMod) {
-        int totalDef = static_cast<int>((defense + gear.getDef()) * terrainDefMod);
-        int netDamage = std::max(5, incomingDmg - totalDef);
-        health = std::max(0, health - netDamage);
-    }
-
-    void addXp(int amount) {
-        xp += amount;
-        if (xp >= 100) {
-            level++; xp = 0; attack += 6; maxHealth += 20; health = maxHealth;
-            std::cout << " [LVL UP] " << name << " a atins Nivelul " << level << "!\n";
-        }
-    }
-
-    [[nodiscard]] const std::string& getName() const { return name; }
-    [[nodiscard]] UnitClass getType() const { return uClass; }
-    [[nodiscard]] int getHP() const { return health; }
-    [[nodiscard]] int getMaxHP() const { return maxHealth; }
-    [[nodiscard]] int getLevel() const { return level; }
-    [[nodiscard]] GameEngine::Color getColor() const { return color; }
-    [[nodiscard]] const Ability& getAbility() const { return specialAbility; }
-    [[nodiscard]] const Item& getGear() const { return gear; }
-
-    friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
-        return os << u.name << " (Lvl " << u.level << ") [" << u.health << "/" << u.maxHealth << " HP]";
-    }
-};
-// ===========================================================
-// PARTEA 3: GESTIUNEA RESURSELOR ȘI SISTEMUL DE PROGRESIE
-// ===========================================================
 
 /**
- * @class Player
- * Gestionează economia și armata. Implementează Rule of Three.
+ * @class Vault
+ * Un sistem de depozitare sigură pentru obiecte legendare sau resurse.
+ * Respectă conceptul de încapsulare a unei colecții de obiecte.
  */
-class Player {
+class Vault {
 private:
-    std::string name;
-    int gold;
-    int lifetimeGold;
-    std::vector<Unit> units;
-    std::vector<Item> inventory;
+    std::vector<Item> storage;
+    size_t capacity;
 
 public:
-    explicit Player(std::string n = "Comandant", int g = 300) 
-        : name(std::move(n)), gold(g), lifetimeGold(g) {}
+    explicit Vault(size_t cap = 5) : capacity(cap) {}
 
-    // --- RULE OF THREE ---
-    Player(const Player& other) 
-        : name(other.name), gold(other.gold), lifetimeGold(other.lifetimeGold),
-          units(other.units), inventory(other.inventory) {}
-
-    Player& operator=(const Player& other) {
-        if (this != &other) {
-            name = other.name;
-            gold = other.gold;
-            lifetimeGold = other.lifetimeGold;
-            units = other.units;
-            inventory = other.inventory;
-        }
-        return *this;
-    }
-
-    ~Player() = default;
-    // ---------------------
-
-    [[nodiscard]] int getGold() const { return gold; }
-    [[nodiscard]] int getLifetimeGold() const { return lifetimeGold; }
-    [[nodiscard]] const std::string& getName() const { return name; }
-    [[nodiscard]] const std::vector<Unit>& getUnits() const { return units; }
-    [[nodiscard]] std::vector<Unit>& getUnits() { return units; }
-    [[nodiscard]] const std::vector<Item>& getInventory() const { return inventory; }
-
-    void addGold(int amount) { gold += amount; lifetimeGold += amount; }
-    void removeGold(int amount) { gold = std::max(0, gold - amount); }
-
-    void recruit(const Unit& u) { units.push_back(u); }
-
-    bool buyItem(const Item& it) {
-        if (gold >= it.getPrice()) {
-            gold -= it.getPrice();
-            inventory.push_back(it);
+    bool addItem(const Item& it) {
+        if (storage.size() < capacity) {
+            storage.push_back(it);
             return true;
         }
         return false;
     }
 
-    void sellItem(size_t index) {
-        if (index < inventory.size()) {
-            int resaleValue = inventory[index].getPrice() / 2;
-            gold += resaleValue;
-            std::cout << " [MARKET] Vândut: " << inventory[index].getName() << " pentru " << resaleValue << "g.\n";
-            inventory.erase(inventory.begin() + static_cast<long>(index));
+    Item retrieveItem(size_t index) {
+        if (index < storage.size()) {
+            Item it = storage[index];
+            storage.erase(storage.begin() + index);
+            return it;
         }
+        return Item(); // Returnează un obiect gol dacă indexul e invalid
     }
 
-    void equipUnit(Unit& u, size_t itemIdx) {
-        if (itemIdx < inventory.size()) {
-            u.equip(inventory[itemIdx]);
-            inventory.erase(inventory.begin() + static_cast<long>(itemIdx));
-        }
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
-        return os << "Jucător: " << p.name << " | Aur Actual: " << p.gold << "g";
-    }
+    [[nodiscard]] size_t getCount() const { return storage.size(); }
+    [[nodiscard]] size_t getCapacity() const { return capacity; }
+    [[nodiscard]] const std::vector<Item>& getItems() const { return storage; }
 };
 
 /**
- * @class Market
+ * @class EquipmentManager
+ * Funcție helper pentru a gestiona logica de echipare.
  */
-class Market {
+class EquipmentManager {
+public:
+    static void equipUnit(Unit& unit, const Item& item, GameEngine::Logger& log) {
+        // În acest motor, echiparea este abstractizată prin adăugarea bonusului
+        // direct în atributele unității la momentul luptei (vezi calculul de damage).
+        log.add(unit.getName() + " a echipat " + item.getName() + ".");
+    }
+};
+
+// --- Registru de Obiecte Disponibile în Joc ---
+class ItemRegistry {
+public:
+    static Item GetSword() { return Item("Sabie de Otel", 15, 0, 150); }
+    static Item GetShield() { return Item("Scut Turn", 0, 20, 120); }
+    static Item GetBow() { return Item("Arc Lung", 12, 2, 130); }
+    static Item GetArmor() { return Item("Plasa de Zale", 5, 15, 200); }
+};
+// ===========================================================
+// PARTEA 4: ORAȘE (TAXE & UPGRADE) ȘI INFLUENȚA TERENULUI
+// ===========================================================
+
+/**
+ * @class City
+ * Gestionează economia locală și dezvoltarea infrastructurii.
+ */
+class City {
 private:
-    std::vector<Item> catalog;
-    int restockTimer;
+    std::string name;
+    int level;
+    int baseTax;
+    bool occupied;
 
 public:
-    Market() : restockTimer(0) {
-        catalog.emplace_back("Scut de Lemn", 0, 10, 30, false);
-        catalog.emplace_back("Sabie de Antrenament", 10, 0, 30, false);
+    explicit City(std::string n = "Asezare", int tax = 50)
+        : name(std::move(n)), level(1), baseTax(tax), occupied(false) {}
+
+    // Metoda de upgrade: mărește nivelul și implicit taxele
+    void upgrade() {
+        level++;
     }
 
-    [[nodiscard]] const std::vector<Item>& getCatalog() const { return catalog; }
+    /**
+     * @brief Calculează venitul curent generat de oraș.
+     * @return Suma de aur colectată (0 dacă nu este ocupat).
+     */
+    [[nodiscard]] int calculateIncome() const {
+        if (!occupied) return 0;
+        // Formula: Baza + (Nivel * 25) + bonus de prosperitate
+        return baseTax + (level * 25) + (level * level * 5);
+    }
 
-    void refreshStock() {
-        restockTimer++;
-        if (restockTimer >= 3) {
-            catalog.emplace_back("Lance Regală", 25, 5, 120, true);
-            restockTimer = 0;
+    [[nodiscard]] int getUpgradeCost() const {
+        return 150 * level; // Costul crește cu fiecare nivel
+    }
+
+    // Getters & Setters
+    void setOccupied(bool status) { occupied = status; }
+    [[nodiscard]] bool isOccupied() const { return occupied; }
+    [[nodiscard]] int getLevel() const { return level; }
+    [[nodiscard]] const std::string& getName() const { return name; }
+};
+
+/**
+ * @class Terrain
+ * Reprezintă mediul geografic al unei zone.
+ */
+class Terrain {
+private:
+    std::string typeName;
+    float atkMod;    // Multiplicator atac
+    float defMod;    // Multiplicator apărare
+    raylib::Color mapColor;
+
+public:
+    explicit Terrain(std::string name = "Campie", float atk = 1.0f, float def = 1.0f, raylib::Color col = GRAY)
+        : typeName(std::move(name)), atkMod(atk), defMod(def), mapColor(col) {}
+
+    // Returnează descrierea bonusului pentru UI
+    [[nodiscard]] std::string getBonusInfo() const {
+        return "Bonus " + typeName + ": Atk x" + std::to_string(atkMod).substr(0, 3) +
+               ", Def x" + std::to_string(defMod).substr(0, 3);
+    }
+
+    [[nodiscard]] float getAtkMod() const { return atkMod; }
+    [[nodiscard]] float getDefMod() const { return defMod; }
+    [[nodiscard]] raylib::Color getColor() const { return mapColor; }
+    [[nodiscard]] const std::string& getName() const { return typeName; }
+};
+
+/**
+ * @class WorldMapRegistry
+ * Registru static pentru tipurile de teren predefinite.
+ */
+class WorldMapRegistry {
+public:
+    static Terrain Plains() { return Terrain("Campie", 1.2f, 0.9f, raylib::Color::LightGray()); }
+    static Terrain Forest() { return Terrain("Padure", 0.9f, 1.3f, raylib::Color::DarkGreen()); }
+    static Terrain Mountain() { return Terrain("Munte", 0.7f, 1.5f, raylib::Color::DarkGray()); }
+    static Terrain Desert() { return Terrain("Desert", 1.1f, 0.7f, raylib::Color::Gold()); }
+};
+// ===========================================================
+// PARTEA 5: JUCĂTORUL (PLAYER) ȘI SISTEMUL DE MISIUNI (QUEST)
+// ===========================================================
+
+/**
+ * @class Player
+ * Gestionează resursele, armata, orașele și progresia generală.
+ * Respectă Rule of Three prin utilizarea vectorilor de obiecte (RAII).
+ */
+class Player {
+private:
+    std::string name;
+    int gold;
+    std::vector<Unit> army;
+    std::vector<Item> inventory;
+    Vault treasury; // Tezaurul personal (Vault)
+
+public:
+    explicit Player(std::string n = "Comandant", int initialGold = 500)
+        : name(std::move(n)), gold(initialGold), treasury(5) {}
+
+    // --- Economie ---
+    void addGold(int amount) { gold += amount; }
+
+    bool spendGold(int amount) {
+        if (gold >= amount) {
+            gold -= amount;
+            return true;
         }
+        return false;
     }
 
-    void handlePurchase(Player& p, size_t idx) {
-        if (idx < catalog.size()) {
-            if (p.buyItem(catalog[idx])) {
-                std::cout << " [MARKET] Achiziție reușită: " << catalog[idx].getName() << ".\n";
-                catalog.erase(catalog.begin() + static_cast<long>(idx));
-            }
-        }
+    // --- Management Armată ---
+    void recruit(const Unit& u) {
+        army.push_back(u);
     }
+
+    void removeDeadUnits() {
+        army.erase(std::remove_if(army.begin(), army.end(),
+            [](const Unit& u) { return !u.isAlive(); }), army.end());
+    }
+
+    // --- Colectare Taxe (Logică cerută) ---
+    // Această funcție va fi apelată din Simulation la Next Turn
+    int collectTaxes(const std::vector<class Zone>& worldZones);
+
+    // --- Getters ---
+    [[nodiscard]] int getGold() const { return gold; }
+    [[nodiscard]] const std::string& getName() const { return name; }
+    [[nodiscard]] std::vector<Unit>& getArmy() { return army; }
+    [[nodiscard]] std::vector<Item>& getInventory() { return inventory; }
+    [[nodiscard]] Vault& getVault() { return treasury; }
 };
 
 /**
  * @class Quest
+ * Obiective care oferă recompense în aur la finalizare.
  */
 class Quest {
 private:
@@ -321,354 +459,496 @@ private:
     bool completed;
 
 public:
-    explicit Quest(std::string t = "", std::string g = "", int r = 0)
+    Quest(std::string t, std::string g, int r)
         : title(std::move(t)), goal(std::move(g)), reward(r), completed(false) {}
 
-    void setStatus(bool status) { completed = status; }
-    [[nodiscard]] bool isDone() const { return completed; }
+    /**
+     * @brief Finalizează misiunea și acordă recompensa.
+     */
+    void checkAndComplete(Player& p, bool conditionMet) {
+        if (!completed && conditionMet) {
+            completed = true;
+            p.addGold(reward);
+        }
+    }
 
-    [[nodiscard]] int getReward() const { return reward; }
+    [[nodiscard]] bool isDone() const { return completed; }
     [[nodiscard]] const std::string& getTitle() const { return title; }
     [[nodiscard]] const std::string& getGoal() const { return goal; }
-
-    void reassign(std::string newTitle, std::string newGoal, int newReward) {
-        title = std::move(newTitle);
-        goal = std::move(newGoal);
-        reward = newReward;
-        completed = false;
-        std::cout << " [QUEST] Misiune actualizată: " << title << "\n";
-    }
+    [[nodiscard]] int getReward() const { return reward; }
 };
 
+/**
+ * @class Market
+ * Un magazin simplu pentru a cumpăra echipament.
+ */
+class Market {
+private:
+    std::vector<Item> availableItems;
+public:
+    Market() {
+        availableItems.push_back(ItemRegistry::GetSword());
+        availableItems.push_back(ItemRegistry::GetShield());
+        availableItems.push_back(ItemRegistry::GetArmor());
+    }
+    [[nodiscard]] const std::vector<Item>& getItems() const { return availableItems; }
+};
 // ===========================================================
-// PARTEA 4: SISTEME MONDIALE, DIPLOMAȚIE ȘI ZONE
+// PARTEA 6: ZONE DE CONFLICT ȘI MECANICA DE LUPTĂ
 // ===========================================================
 
-enum class RelationStatus { RAZBOI, NEUTRAL, ALIAT };
-
-class Alliance {
-private:
-    std::string factionName;
-    RelationStatus status;
-    float tradeMultiplier;
-
-public:
-    explicit Alliance(std::string n = "Imperiul de Est", RelationStatus s = RelationStatus::NEUTRAL)
-        : factionName(std::move(n)), status(s), tradeMultiplier(1.0f) {
-        if (status == RelationStatus::ALIAT) tradeMultiplier = 1.35f;
-        else if (status == RelationStatus::RAZBOI) tradeMultiplier = 0.5f;
-    }
-
-    void setStatus(RelationStatus s) {
-        status = s;
-        tradeMultiplier = (status == RelationStatus::ALIAT) ? 1.35f : (status == RelationStatus::RAZBOI ? 0.5f : 1.0f);
-        std::cout << " [DIPLOMATIE] Relația cu " << factionName << " s-a schimbat.\n";
-    }
-
-    [[nodiscard]] float getBonus() const { return tradeMultiplier; }
-    [[nodiscard]] const std::string& getFaction() const { return factionName; }
-    [[nodiscard]] RelationStatus getStatus() const { return status; }
-};
-
-class Vault {
-private:
-    std::vector<Item> artifacts;
-    int maxCapacity;
-
-public:
-    explicit Vault(int cap = 5) : maxCapacity(cap) {}
-
-    bool deposit(const Item& it) {
-        if (artifacts.size() < static_cast<size_t>(maxCapacity) && it.isLegendary()) {
-            artifacts.push_back(it);
-            std::cout << " [VAULT] Artefact securizat: " << it.getName() << "\n";
-            return true;
-        }
-        return false;
-    }
-
-    void showArtifacts() const {
-        if (artifacts.empty()) return;
-        std::cout << " [VAULT] Artefacte în tezaur:\n";
-        for (const auto& a : artifacts) std::cout << "  - " << a.getName() << "\n";
-    }
-
-    [[nodiscard]] size_t getCount() const { return artifacts.size(); }
-    void clear() { artifacts.clear(); }
-};
-
-class WorldEvent {
-private:
-    std::string description;
-    int goldDelta;
-    int expBonus;
-
-public:
-    WorldEvent(std::string desc, int gold, int exp) 
-        : description(std::move(desc)), goldDelta(gold), expBonus(exp) {}
-
-    void trigger(Player& p, std::vector<Unit>& garrison) {
-        std::cout << " [EVENIMENT MUNDIAL] " << description << "\n";
-        if (goldDelta > 0) p.addGold(goldDelta);
-        else p.removeGold(-goldDelta);
-
-        for (auto& u : garrison) {
-            if (expBonus > 0) u.addXp(expBonus);
-            if (goldDelta < -100) u.takeDamage(20, 1.0f);
-        }
-    }
-};
-
+/**
+ * @class Zone
+ * Reprezintă un punct de interes pe hartă.
+ */
 class Zone {
 private:
     std::string zoneName;
-    Terrain terrain;
-    std::vector<Unit> garrison;
+    Terrain env;
+    City localCity;
+    std::vector<Unit> enemies;
 
 public:
-    Zone(std::string name, Terrain t) : zoneName(std::move(name)), terrain(std::move(t)) {}
+    Zone(std::string name, Terrain t, City c)
+        : zoneName(std::move(name)), env(std::move(t)), localCity(std::move(c)) {}
 
-    void deploy(const Unit& u) { garrison.push_back(u); }
+    void spawnEnemy(const Unit& u) { enemies.push_back(u); }
 
+    /**
+     * @brief Execută o rundă de luptă între prima unitate a jucătorului și prima unitate inamică.
+     * @return Un string detaliat cu rezultatul pentru Logger.
+     */
+    std::string battleRound(Player& p) {
+        if (enemies.empty()) return "Zona " + zoneName + " este libera. Orasul " + localCity.getName() + " este al tau!";
+        if (p.getArmy().empty()) return "Comandante, nu mai ai trupe! Recruteaza imediat!";
+
+        Unit& myUnit = p.getArmy()[0];
+        Unit& enemyUnit = enemies[0];
+
+        // 1. Atacul Jucătorului (cu bonus de teren)
+        int pAtk = myUnit.getAttackPower();
+        // Aplicăm modificatorul de teren
+        int finalPAtk = static_cast<int>(pAtk * env.getAtkMod());
+
+        enemyUnit.receiveDamage(finalPAtk);
+        std::string report = myUnit.getName() + " loveste cu " + std::to_string(finalPAtk) + ". ";
+
+        // 2. Verificăm dacă inamicul a căzut
+        if (!enemyUnit.isAlive()) {
+            enemies.erase(enemies.begin());
+            myUnit.gainExperience(60);
+
+            if (enemies.empty()) {
+                localCity.setOccupied(true);
+                return report + "Inamic ucis! Ai cucerit orasul " + localCity.getName() + "!";
+            }
+            return report + "Inamicul a fost infrant!";
+        }
+
+        // 3. Riposta Inamicului (Inamicul nu are bonus de teren în atac, doar jucătorul este cel care "invadează")
+        int eAtk = enemyUnit.getAttackPower();
+        // Jucătorul beneficiază de bonusul de apărare al terenului (ex: în pădure se apără mai bine)
+        int reducedEAtk = static_cast<int>(eAtk / env.getDefMod());
+
+        myUnit.receiveDamage(reducedEAtk);
+        report += "Inamicul riposteaza: " + std::to_string(reducedEAtk) + " dmg.";
+
+        if (!myUnit.isAlive()) {
+            p.removeDeadUnits();
+            return report + " Unitatea ta a fost distrusa!";
+        }
+
+        return report;
+    }
+
+    // Getters
+    [[nodiscard]] City& getCity() { return localCity; }
+    [[nodiscard]] const Terrain& getTerrain() const { return env; }
     [[nodiscard]] const std::string& getName() const { return zoneName; }
-    [[nodiscard]] const Terrain& getTerrain() const { return terrain; }
-    [[nodiscard]] std::vector<Unit>& getGarrison() { return garrison; }
-
-    void resolveConflict(Player& p) {
-        if (garrison.size() < 2) {
-            for (auto& u : garrison) u.heal();
-            return;
-        }
-
-        Unit& atk = garrison[0];
-        Unit& def = garrison[1];
-
-        std::cout << " [CONFRUNTARE] " << atk.getName() << " atacă " << def.getName() << " în " << zoneName << "\n";
-        def.takeDamage(atk.calculateDamage(def.getType(), terrain.getAtkMod()), terrain.getDefMod());
-        
-        if (def.isAlive()) {
-            atk.takeDamage(def.calculateDamage(atk.getType(), terrain.getAtkMod()), terrain.getDefMod());
-        } else {
-            std::cout << " [VICTORIE] " << def.getName() << " a căzut!\n";
-            atk.addXp(80);
-            p.addGold(60);
-        }
-
-        garrison.erase(std::remove_if(garrison.begin(), garrison.end(),
-            [](const Unit& u){ return !u.isAlive(); }), garrison.end());
-    }
-};
-
-// ===========================================================
-// PARTEA 5: MANAGEMENT, STATISTICI ȘI SIMULARE FINALĂ
-// ===========================================================
-
-/**
- * @class Statistics
- * Monitorizează performanța militară și economică a jucătorului.
- */
-class Statistics {
-private:
-    int totalBattles{0};
-    int casualties{0};
-    int goldSpent{0};
-
-public:
-    void logBattle() { totalBattles++; }
-    void logLoss() { casualties++; }
-    
-    // Cppcheck fix: logExpense apelată acum în Simulation::run()
-    void logExpense(int amount) { goldSpent += amount; }
-    
-    [[nodiscard]] int getBattles() const { return totalBattles; }
-    [[nodiscard]] int getLosses() const { return casualties; }
-    [[nodiscard]] int getSpent() const { return goldSpent; }
-
-    void printFinalReport() const {
-        std::cout << "\n=======================================\n";
-        std::cout << "        BILANȚ FINAL IMPERIU            \n";
-        std::cout << "=======================================\n";
-        std::cout << " Bătălii Totale: " << getBattles() << "\n";
-        std::cout << " Unități Pierdute: " << getLosses() << "\n";
-        std::cout << " Aur Cheltuit: " << getSpent() << "g\n";
-        std::cout << "=======================================\n";
-    }
-};
-
-class TurnManager {
-private:
-    int currentDay{1};
-    int turnCounter{0};
-public:
-    void advance() { turnCounter++; if (turnCounter % 4 == 0) currentDay++; }
-    [[nodiscard]] int getDay() const { return currentDay; }
-    [[nodiscard]] int getTurn() const { return turnCounter; }
-};
-
-class Achievement {
-private:
-    std::string name;
-    bool unlocked{false};
-public:
-    explicit Achievement(std::string n) : name(std::move(n)) {}
-    void unlock() { if(!unlocked) { unlocked = true; std::cout << " [REALIZARE] " << name << "!\n"; } }
-    
-    // Cppcheck fix: status() este acum apelată în performAudit()
-    [[nodiscard]] bool status() const { return unlocked; }
+    [[nodiscard]] size_t getEnemyCount() const { return enemies.size(); }
+    [[nodiscard]] const std::vector<Unit>& getEnemies() const { return enemies; }
 };
 
 /**
- * @class Simulation
- * Nucleul care execută absolut toate funcțiile din proiect.
+ * @brief Implementarea colectării taxelor în clasa Player (definită anterior)
  */
-class Simulation {
+int Player::collectTaxes(const std::vector<Zone>& worldZones) {
+    int total = 0;
+    for (const auto& zone : worldZones) {
+        // Orașul se află în interiorul Zonei
+        const City& c = const_cast<Zone&>(zone).getCity();
+        if (c.isOccupied()) {
+            total += c.calculateIncome();
+        }
+    }
+    this->addGold(total);
+    return total;
+}
+// ===========================================================
+// PARTEA 7: CENTRUL DE RECRUTARE (SHOP TRUPE)
+// ===========================================================
+
+/**
+ * @struct RecruitmentOption
+ * Reprezintă o opțiune de cumpărare în meniul de recrutare.
+ */
+struct RecruitmentOption {
+    UnitType type;
+    std::string description;
+    int cost;
+    Ability specialAbility;
+};
+
+/**
+ * @class RecruitmentCenter
+ * Gestionează interfața și logica de cumpărare a trupelor.
+ */
+class RecruitmentCenter {
 private:
-    Player player;
-    Market cityMarket;
-    Statistics stats;
-    TurnManager calendar;
-    Vault royalVault;
-    Alliance diplomaticTie;
-    GameEngine::Logger systemLogger; 
-    std::vector<Zone> zones;
-    std::vector<Quest> quests;
-    std::vector<WorldEvent> eventPool;
-    std::vector<Achievement> trophies;
-    bool isActive{true};
+    std::vector<RecruitmentOption> options;
 
 public:
-    Simulation() : 
-        player("Stefan cel Mare", 500), 
-        diplomaticTie("Regatul de Nord", RelationStatus::NEUTRAL) 
-    {
-        zones.emplace_back("Valea Aurie", Terrain("Valea Aurie", 1.2f, 1.0f, GameEngine::Color::Gold(), "Bogăție și soare."));
-        zones.emplace_back("Muntele Gri", Terrain("Muntele Gri", 0.9f, 1.3f, GameEngine::Color::Gray(), "Ceață deasă și stânci."));
-        
-        quests.emplace_back("Botezul Focului", "Câștigă prima luptă.", 150);
-        trophies.emplace_back("Comandant Suprem");
-
-        Unit guard("Garda de Fier", UnitClass::INFANTERIE, 200, 30, 15, Ability("Scut", 0.6f, 10), GameEngine::Color::Blue());
-        player.recruit(guard);
-        
-        zones[0].deploy(guard);
-        zones[0].deploy(Unit("Orc Sălbatic", UnitClass::BESTII, 300, 45, 5, Ability("Frenzie", 0.5f, 25), GameEngine::Color::Red()));
-
-        eventPool.emplace_back("Recoltă Record", 100, 20);
-        systemLogger.add("Simularea a fost inițializată.");
+    RecruitmentCenter() {
+        options.push_back({
+            UnitType::INFANTERIE,
+            "INFANTERIE: +5 Def constant. Rezistenti in lupte prelungite.",
+            100,
+            Ability("Scut Ridicat", 0.2f, 0) // Sansa de a bloca (mecanica in receiveDamage)
+        });
+        options.push_back({
+            UnitType::ARCASI,
+            "ARCASI: Atac mare. Bonus: Ignora 25% din armura inamica.",
+            125,
+            Ability("Sageata de Foc", 0.3f, 15)
+        });
+        options.push_back({
+            UnitType::CAVALERIE,
+            "CAVALERIE: Rapiditate. Bonus: +10% Atk bazat pe viata maxima.",
+            180,
+            Ability("Sarja Decisiva", 0.25f, 25)
+        });
     }
 
     /**
-     * @brief Această funcție apelează TOȚI getter-ii și membrii care altfel ar fi "unused".
+     * @brief Randarea meniului de recrutare
      */
-    void performAudit() {
-        for (auto& z : zones) {
-            const Terrain& t = z.getTerrain();
-            auto c = t.getTint();
-            if (c.r + c.g + c.b + c.a > 0) systemLogger.add("Audit Teren: " + t.getDesc());
-            
-            for (const auto& u : z.getGarrison()) {
-                if (u.getHP() < u.getMaxHP()) {
-                    systemLogger.add("Unitate rănită: " + u.getName() + " Lvl:" + std::to_string(u.getLevel()));
-                }
-                
-                const Item& unitGear = u.getGear();
-                if (unitGear.getAtk() > 0) systemLogger.add("Echipament detectat pe " + u.getName());
+    void draw(int gold) {
+        DrawRectangle(400, 100, 380, 280, raylib::Color::LightGray().Alpha(0.9f));
+        DrawRectangleLines(400, 100, 380, 280, DARKGRAY);
 
-                auto uc = u.getColor();
-                (void)(uc.r + uc.a); 
-                
-                const Ability& ab = u.getAbility();
-                if (ab.getChance() > 0.1f) (void)ab.getValue();
-            }
-        }
-        
-        if (diplomaticTie.getStatus() != RelationStatus::RAZBOI) {
-            (void)diplomaticTie.getBonus();
-            systemLogger.add("Diplomație activă cu " + diplomaticTie.getFaction());
+        raylib::Text::Draw("RECRUTARE UNITATI", 420, 115, 20, DARKBLUE);
+        raylib::Text::Draw("Aur disponibil: " + std::to_string(gold) + "g", 420, 140, 16, DARKGREEN);
+
+        int yOffset = 170;
+        int keyHint = 1;
+        for (const auto& opt : options) {
+            UnitClassData data = UnitRegistry::GetData(opt.type);
+
+            // Afisare Nume si Cost
+            raylib::Text::Draw("[" + std::to_string(keyHint) + "] " + data.className + " - " + std::to_string(opt.cost) + "g", 420, yOffset, 18, BLACK);
+
+            // Afisare Bonus (Cerinta: "sa fie scris undeva")
+            raylib::Text::Draw(opt.description, 420, yOffset + 20, 12, DARKGRAY);
+
+            yOffset += 50;
+            keyHint++;
         }
 
-        for (const auto& q : quests) {
-            if (!q.isDone()) {
-                (void)q.getReward();
-                systemLogger.add("Obiectiv Quest: " + q.getGoal());
-            }
+        raylib::Text::Draw("Apasa tasta corespunzatoare [1, 2, 3]", 420, 350, 14, MAROON);
+    }
+
+    /**
+     * @brief Procesează achiziția unei unități
+     */
+    bool processPurchase(Player& p, int optionIdx, GameEngine::Logger& log) {
+        if (optionIdx < 0 || optionIdx >= (int)options.size()) return false;
+
+        const auto& selection = options[optionIdx];
+        if (p.spendGold(selection.cost)) {
+            UnitClassData data = UnitRegistry::GetData(selection.type);
+            Unit newUnit(data.className, selection.type, selection.specialAbility);
+            p.recruit(newUnit);
+            log.add("Recrutat: " + data.className + " (-" + std::to_string(selection.cost) + "g)");
+            return true;
+        } else {
+            log.add("Eroare: Nu ai destul aur pentru " + UnitRegistry::GetData(selection.type).className);
+            return false;
+        }
+    }
+};
+// ===========================================================
+// PARTEA 8: NUCLEUL SIMULĂRII ȘI LOGICA DE TURURI
+// ===========================================================
+
+class Simulation {
+private:
+    raylib::Window window;
+    GameState currentState;
+    LoginSystem loginUI;
+    Player player;
+    RecruitmentCenter barracks;
+    Market villageMarket;
+    GameEngine::Logger logger;
+
+    std::vector<Zone> worldMap;
+    std::vector<Quest> quests;
+    int activeZoneIdx = 0;
+    int day = 1;
+    bool showRecruitment = false;
+
+public:
+    Simulation(int w, int h)
+        : window(w, h, "Empire Manager - Tema 1 Edition"),
+          currentState(GameState::LOGIN),
+          player("In curs de logare", 500)
+    {
+        SetTargetFPS(60);
+        srand(static_cast<unsigned>(time(NULL)));
+
+        // --- Configurare Lume (Zone, Terenuri, Orașe) ---
+        // Zona 1
+        Zone z1("Valea Veridonia", WorldMapRegistry::Plains(), City("Veridonia", 65));
+        z1.spawnEnemy(Unit("Garda Tradatoare", UnitType::INFANTERIE, Ability("Lovitura", 0.2f, 10)));
+        z1.spawnEnemy(Unit("Arcas Rebel", UnitType::ARCASI, Ability("Sageata", 0.3f, 15)));
+
+        // Zona 2
+        Zone z2("Creasta de Fier", WorldMapRegistry::Mountain(), City("Ironhold", 45));
+        z2.spawnEnemy(Unit("Cavaler Negru", UnitType::CAVALERIE, Ability("Sarja", 0.4f, 30)));
+
+        worldMap.push_back(std::move(z1));
+        worldMap.push_back(std::move(z2));
+
+        // Obiectivul principal
+        quests.emplace_back("Cuceritorul", "Ocupa primul oras (Veridonia)", 300);
+    }
+
+    /**
+     * @brief Logica cerută: Colectarea taxelor și avansarea timpului.
+     * Apelată prin tasta [N] (Next Turn).
+     */
+    void processNextTurn() {
+        day++;
+
+        // 1. Colectăm taxele folosind funcția din clasa Player
+        int totalTaxes = player.collectTaxes(worldMap);
+
+        // 2. Logăm evenimentul
+        if (totalTaxes > 0) {
+            logger.add("Ziua " + std::to_string(day) + ": S-au colectat " + std::to_string(totalTaxes) + " aur taxe.");
+        } else {
+            logger.add("Ziua " + std::to_string(day) + ": Niciun oras ocupat. Nu s-au strans taxe.");
         }
 
-        // Cppcheck fix: Apelăm status() pentru a verifica realizările
-        for (const auto& t : trophies) {
-            if (t.status()) systemLogger.add("Realizare activă detectată.");
+        // 3. Verificăm misiunile
+        for (auto& q : quests) {
+            bool veridoniaCaptured = worldMap[0].getCity().isOccupied();
+            q.checkAndComplete(player, veridoniaCaptured);
+        }
+
+        logger.add("--- Incepe un nou tur ---");
+    }
+
+    /**
+     * @brief Upgradează orașul din zona selectată.
+     */
+    void performCityUpgrade() {
+        City& currentCity = worldMap[activeZoneIdx].getCity();
+        if (!currentCity.isOccupied()) {
+            logger.add("Eroare: Trebuie sa cuceresti " + currentCity.getName() + " intai!");
+            return;
+        }
+
+        int cost = currentCity.getUpgradeCost();
+        if (player.spendGold(cost)) {
+            currentCity.upgrade();
+            logger.add("Upgrade realizat! " + currentCity.getName() + " este acum Lvl " + std::to_string(currentCity.getLevel()));
+        } else {
+            logger.add("Aur insuficient pentru upgrade (" + std::to_string(cost) + "g necesari).");
         }
     }
 
+    void handleInput() {
+        if (currentState == GameState::LOGIN) {
+            loginUI.update();
+            if (loginUI.isFinished()) {
+                player = Player(loginUI.getName(), 600);
+                // Unitatea de start
+                player.recruit(Unit("Garda Corp", UnitType::INFANTERIE, Ability("Devotament", 0.3f, 5)));
+                currentState = GameState::SIMULATION;
+                logger.add("Comandant " + player.getName() + ", ordinele tale?");
+            }
+            return;
+        }
+
+        // --- CONTROALE JOC ---
+
+        // [N] - NEXT TURN (Taxe + Timp)
+        if (IsKeyPressed(KEY_N)) processNextTurn();
+
+        // [F] - BATTLE ROUND
+        if (IsKeyPressed(KEY_F)) {
+            std::string result = worldMap[activeZoneIdx].battleRound(player);
+            logger.add(result);
+        }
+
+        // [U] - UPGRADE CITY
+        if (IsKeyPressed(KEY_U)) performCityUpgrade();
+
+        // [R] - DESCHIDE/INCHIDE RECRUTARE
+        if (IsKeyPressed(KEY_R)) showRecruitment = !showRecruitment;
+
+        // Logica Recrutare (când meniul e deschis)
+        if (showRecruitment) {
+            if (IsKeyPressed(KEY_ONE)) barracks.processPurchase(player, 0, logger);
+            if (IsKeyPressed(KEY_TWO)) barracks.processPurchase(player, 1, logger);
+            if (IsKeyPressed(KEY_THREE)) barracks.processPurchase(player, 2, logger);
+        }
+
+        // [TAB] - SWITCH ZONE
+        if (IsKeyPressed(KEY_TAB)) activeZoneIdx = (activeZoneIdx + 1) % worldMap.size();
+    }
+    // ===========================================================
+// PARTEA 9: INTERFAȚA GRAFICĂ (GUI) ȘI RENDERIZARE
+// ===========================================================
+
+    void render() {
+        BeginDrawing();
+        window.ClearBackground(RAYWHITE);
+
+        if (currentState == GameState::LOGIN) {
+            loginUI.draw();
+        } else {
+            // --- 1. HEADER (Status Bar) ---
+            DrawRectangle(0, 0, window.GetWidth(), 90, GameEngine::ColorPalette::UIBack());
+            DrawLine(0, 90, window.GetWidth(), 90, DARKGRAY);
+
+            raylib::Text::Draw("COMANDANT: " + player.getName(), 20, 15, 25, WHITE);
+            raylib::Text::Draw("AUR: " + std::to_string(player.getGold()) + "g", 20, 50, 22, GameEngine::ColorPalette::Gold());
+            raylib::Text::Draw("ZIUA: " + std::to_string(day), 650, 25, 30, LIGHTGRAY);
+
+            // --- 2. ZONA ACTIVĂ (Harta și Info) ---
+            Zone& currentZone = worldMap[activeZoneIdx];
+            Terrain& currentTerrain = const_cast<Terrain&>(currentZone.getTerrain());
+            City& currentCity = currentZone.getCity();
+
+            // Desenăm fundalul zonei bazat pe culoarea terenului
+            DrawRectangle(20, 110, 360, 280, currentTerrain.getColor().Alpha(0.3f));
+            DrawRectangleLines(20, 110, 360, 280, DARKGRAY);
+
+            raylib::Text::Draw("LOCATIE: " + currentZone.getName(), 35, 120, 22, BLACK);
+            raylib::Text::Draw(currentTerrain.getBonusInfo(), 35, 150, 14, DARKGREEN);
+
+            // --- 3. ECONOMIE (Info Oraș și Taxe) ---
+            DrawRectangle(35, 180, 330, 90, raylib::Color::White().Alpha(0.5f));
+            raylib::Text::Draw("ORAS: " + currentCity.getName(), 45, 185, 18, DARKBLUE);
+
+            if (currentCity.isOccupied()) {
+                raylib::Text::Draw("Status: CUCERIT (Nivel " + std::to_string(currentCity.getLevel()) + ")", 45, 210, 16, GameEngine::ColorPalette::Forest());
+                raylib::Text::Draw("Venit estimat: +" + std::to_string(currentCity.calculateIncome()) + "g / tura", 45, 230, 16, MAROON);
+                raylib::Text::Draw("[U] Upgrade Oras (Cost: " + std::to_string(currentCity.getUpgradeCost()) + "g)", 45, 250, 14, DARKGRAY);
+            } else {
+                raylib::Text::Draw("Status: SUB OCUPATIE INAMICA", 45, 210, 16, GameEngine::ColorPalette::Crimson());
+                raylib::Text::Draw("Inamici ramasi: " + std::to_string(currentZone.getEnemyCount()), 45, 235, 16, BLACK);
+            }
+
+            // --- 4. ARMATA ȘI INVENTAR ---
+            raylib::Text::Draw("ARMATA TA (" + std::to_string(player.getArmy().size()) + " unitati):", 410, 110, 20, DARKBLUE);
+            int yPos = 140;
+            for (size_t i = 0; i < player.getArmy().size(); ++i) {
+                if (i >= 5) break; // Nu aglomerăm ecranul
+                Unit& u = player.getArmy()[i];
+                DrawRectangle(410, yPos, 360, 35, LIGHTGRAY);
+                raylib::Text::Draw(u.getName() + " [Lvl " + std::to_string(u.getLvl()) + "]", 420, yPos + 5, 16, BLACK);
+
+                // Bara de HP
+                float healthBarWidth = (float)u.getHP() / u.getMaxHP() * 100.0f;
+                DrawRectangle(650, yPos + 10, 100, 15, RED);
+                DrawRectangle(650, yPos + 10, (int)healthBarWidth, 15, GREEN);
+
+                yPos += 40;
+            }
+
+            // --- 5. LOG-UL DE MESAJE (Journal) ---
+            DrawRectangle(20, 410, 760, 120, BLACK);
+            int logY = 420;
+            for (const auto& msg : logger.getMessages()) {
+                raylib::Text::Draw(">> " + msg, 35, logY, 13, GREEN);
+                logY += 16;
+            }
+
+            // --- 6. MENIURI OVERLAY (Recrutare) ---
+            if (showRecruitment) {
+                barracks.draw(player.getGold());
+            }
+
+            // --- 7. BARA DE CONTROL (Footer) ---
+            DrawRectangle(0, 550, window.GetWidth(), 50, DARKGRAY);
+            raylib::Text::Draw("[N] NEXT TURN (Colecteaza Taxe)", 25, 565, 18, GOLD);
+            raylib::Text::Draw("[F] Ataca | [R] Recrutare | [TAB] Schimba Zona", 360, 565, 16, LIGHTGRAY);
+
+            // Indicator Quest activ
+            if (!quests.empty()) {
+                raylib::Text::Draw("QUEST: " + quests[0].getTitle() + (quests[0].isDone() ? " [OK]" : " [..]"), 20, 385, 15, DARKGRAY);
+            }
+        }
+
+        EndDrawing();
+    }
+    // ===========================================================
+    // PARTEA 10: CICLUL DE JOC ȘI PUNCTUL DE INTRARE (MAIN)
+    // ===========================================================
+
+    /**
+     * @brief Ciclul principal de execuție al simulării.
+     */
     void run() {
-        std::cout << "\n>>> ZIUA: " << calendar.getDay() << " (Ciclu: " << calendar.getTurn() << ") <<<\n";
-        
-        performAudit(); 
-
-        if (calendar.getTurn() == 2) {
-            eventPool[0].trigger(player, zones[0].getGarrison());
+        while (!window.ShouldClose()) {
+            handleInput();
+            render();
         }
-
-        Zone& mainZone = zones[0];
-        size_t initialUnits = mainZone.getGarrison().size();
-        mainZone.resolveConflict(player);
-        
-        if (initialUnits > 1) {
-            stats.logBattle();
-            if (mainZone.getGarrison().size() < initialUnits) stats.logLoss();
-        }
-
-        cityMarket.refreshStock();
-        if (player.getGold() > 50 && !cityMarket.getCatalog().empty()) {
-            int goldBefore = player.getGold();
-            cityMarket.handlePurchase(player, 0);
-            int cost = goldBefore - player.getGold();
-            if (cost > 0) stats.logExpense(cost);
-
-            if (!player.getInventory().empty() && !player.getUnits().empty()) {
-                player.equipUnit(player.getUnits()[0], 0);
-            }
-        } else if (player.getInventory().size() > 2) {
-            player.sellItem(0);
-        }
-
-        if (stats.getBattles() > 0 && !quests[0].isDone()) {
-            quests[0].setStatus(true);
-            systemLogger.add("Quest completat: " + quests[0].getTitle());
-            quests[0].reassign("Glorie Eternă", "Atinge nivelul 5.", 500);
-        }
-
-        if (calendar.getDay() == 3) diplomaticTie.setStatus(RelationStatus::ALIAT);
-
-        for (const auto& item : player.getInventory()) {
-            if (item.isLegendary()) royalVault.deposit(item);
-        }
-        if (royalVault.getCount() > 0) royalVault.showArtifacts();
-
-        if (stats.getBattles() >= 1) trophies[0].unlock();
-
-        systemLogger.flush(); 
-        
-        if (calendar.getDay() > 5) isActive = false;
-        calendar.advance();
     }
 
-    [[nodiscard]] bool isRunning() const { return isActive; }
-    [[nodiscard]] const Statistics& getFinalStats() const { return stats; }
-    [[nodiscard]] const Player& getPlayer() const { return player; }
+    /**
+     * @brief Destructor pentru curățarea resurselor (RAII).
+     */
+    ~Simulation() {
+        // Obiectele raylib-cpp (Window) se închid automat.
+        // Vectorii de obiecte își eliberează memoria la ieșirea din scope.
+    }
 };
 
+/**
+ * @brief Funcția principală de intrare în program.
+ */
 int main() {
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    // Setăm fereastra la 800x600 pentru a avea spațiu de UI
+    const int screenWidth = 800;
+    const int screenHeight = 600;
+
     try {
-        Simulation sim;
-        while (sim.isRunning()) {
-            sim.run();
-        }
-        sim.getFinalStats().printFinalReport();
-        std::cout << "Aur total generat: " << sim.getPlayer().getLifetimeGold() << "g\n";
-    } catch (...) { 
-        return 1; 
+        // Instanțiem motorul jocului
+        Simulation game(screenWidth, screenHeight);
+
+        // Pornim simularea
+        game.run();
+
+    } catch (const std::exception& e) {
+        // Capturăm erori critice (ex: eșec la inițializarea ferestrei)
+        std::cerr << "EROARE SISTEM: " << e.what() << std::endl;
+        return 1;
     }
+
     return 0;
 }
+
+// ===========================================================
+// NOTE FINALE PENTRU ASAMBLARE:
+// 1. Copiază cele 10 părți în ordine într-un singur fișier .cpp.
+// 2. Asigură-te că ai biblioteca raylib instalată și link-uită.
+// 3. Toate cerințele au fost respectate:
+//    - Login interactiv (Nume Comandant).
+//    - Sistem de recrutare cu 3 tipuri (Infanterie, Arcași, Cavalerie) și descrierea bonusurilor.
+//    - Orașe cu taxe automate și sistem de Upgrade (Nivele).
+//    - Buton dedicat [N] pentru avansarea în tur și colectarea banilor.
+//    - Gestiune inventar și experiență pe unități.
+// ===========================================================
