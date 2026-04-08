@@ -122,10 +122,6 @@ private:
     Ability specialAbility;
 
 public:
-    /**
-     * @brief Constructor cu parametri. Initializam toti membrii pentru a evita
-     * warning-urile de tip "non-initialized field".
-     */
     Unit(std::string n, UnitType t, Ability ab)
         : name(std::move(n)), type(t), hp(0), maxHp(0), atk(0), def(0),
           level(1), xp(0), specialAbility(std::move(ab)) {
@@ -137,33 +133,19 @@ public:
     }
 
     // --- RULE OF THREE ---
-
-    // 1. Constructor de copiere (Clang-Tidy: Use = default)
     Unit(const Unit& other) = default;
-
-    // 2. Operator de atribuire prin copiere
-    Unit& operator=(const Unit& other) {
-        if (this != &other) {
-            name = other.name;
-            type = other.type;
-            hp = other.hp;
-            maxHp = other.maxHp;
-            atk = other.atk;
-            def = other.def;
-            level = other.level;
-            xp = other.xp;
-            specialAbility = other.specialAbility;
-        }
-        return *this;
-    }
-
-    // 3. Destructor
+    Unit& operator=(const Unit& other) = default;
     ~Unit() = default;
 
     // --- LOGICA COMPLEXA ---
-
     [[nodiscard]] int calculateTotalAttack() const {
+        // Foloseste sansa aleatorie a abilitatii
         return atk + specialAbility.trigger() + (level * 7);
+    }
+
+    [[nodiscard]] int getBaseAttackPower() const {
+        // Valoare stabila pentru afisare in UI (fara trigger aleator)
+        return atk + (level * 7);
     }
 
     void takeDamage(int rawDamage) {
@@ -183,7 +165,7 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
-        os << "Soldat: " << u.name << " " << u.specialAbility;
+        os << "Soldat: " << u.name << " (Lvl " << u.level << ") " << u.specialAbility;
         return os;
     }
 
@@ -215,48 +197,33 @@ public:
         : cityName(std::move(name)), cityLevel(1), baseIncome(income),
           population(100), occupied(false) {}
 
-    /**
-     * @brief Calculeaza eficienta taxelor bazata pe populatie si nivel.
-     * Functie complexa: Venitul nu este liniar.
-     */
     [[nodiscard]] int collectTaxes() const {
         if (!occupied) return 0;
         float efficiency = 1.0f + (static_cast<float>(cityLevel) * 0.2f);
         return static_cast<int>((baseIncome + (population / 2)) * efficiency);
     }
 
-    /**
-     * @brief Calculeaza costul de upgrade folosind o progresie patratica.
-     */
     [[nodiscard]] int getUpgradeCost() const {
         return 300 * cityLevel + (cityLevel * cityLevel * 45) + (population / 5);
     }
 
-    /**
-     * @brief Executa imbunatatirea cetatii si cresterea populatiei.
-     */
     void upgrade() {
         cityLevel++;
         population += 50 * cityLevel;
     }
 
-    /**
-     * @brief Simuleaza un eveniment de crestere naturala a orasului.
-     */
     void simulateGrowth() {
         if (occupied) {
             population += 5 + (cityLevel * 2);
         }
     }
 
-    // Operator afisare (Cerinta Tema 1: Compunere apeluri)
     friend std::ostream& operator<<(std::ostream& os, const City& c) {
         os << "Cetatea << " << c.cityName << " >> [Nivel: " << c.cityLevel
            << " | Populatie: " << c.population << "]";
         return os;
     }
 
-    // Gettere si Settere
     void setOccupied(bool status) { occupied = status; }
     [[nodiscard]] bool isOccupied() const { return occupied; }
     [[nodiscard]] const std::string& getName() const { return cityName; }
@@ -430,7 +397,7 @@ public:
 
 /**
  * @class LoginManager
- * Interfata pentru introducerea numelui.
+ * Gestioneaza ecranul de autentificare si input-ul numelui.
  */
 class LoginManager {
 private:
@@ -441,7 +408,9 @@ public:
     void update() {
         int key = GetCharPressed();
         while (key > 0) {
-            if (inputBuffer.length() < 12) inputBuffer += static_cast<char>(key);
+            if ((key >= 32) && (key <= 125) && (inputBuffer.length() < 12)) {
+                inputBuffer += static_cast<char>(key);
+            }
             key = GetCharPressed();
         }
         if (IsKeyPressed(KEY_BACKSPACE) && !inputBuffer.empty()) inputBuffer.pop_back();
@@ -451,13 +420,17 @@ public:
     void draw() const {
         DrawRectangleGradientV(0, 0, 1600, 1200, DARKGRAY, BLACK);
         raylib::Text::Draw("EMPIRE RISING", 550, 400, 70, GameEngine::ColorPalette::Gold());
-        raylib::Text::Draw("Nume Comandant:", 650, 500, 25, LIGHTGRAY);
+        raylib::Text::Draw("Numele Comandantului:", 650, 500, 25, LIGHTGRAY);
         DrawRectangle(600, 550, 400, 60, RAYWHITE);
         raylib::Text::Draw(inputBuffer, 620, 562, 35, DARKGRAY);
     }
 
     [[nodiscard]] bool isAuthenticated() const { return authenticated; }
-    [[nodiscard]] std::string getPlayerName() const { return inputBuffer; }
+
+    /**
+     * @brief Returneaza numele prin referinta constanta pentru performanta.
+     */
+    [[nodiscard]] const std::string& getPlayerName() const { return inputBuffer; }
 };
 /**
  * @class Simulation
@@ -574,73 +547,64 @@ public:
             const auto& zone = worldMap[static_cast<size_t>(activeZoneIdx)];
             const auto& city = zone.getCity();
 
-            // --- 1. HEADER (Status Jucator) ---
+            // --- 1. HEADER ---
             DrawRectangle(0, 0, 1600, 140, GameEngine::ColorPalette::UIBack());
             raylib::Text::Draw("COMANDANT: " + player.getName(), 50, 40, 35, WHITE);
             raylib::Text::Draw("TEZAUR: " + std::to_string(player.getGold()) + " AUR", 50, 90, 25, GameEngine::ColorPalette::Gold());
             raylib::Text::Draw("ZIUA: " + std::to_string(gameDay), 1400, 40, 30, LIGHTGRAY);
 
-            // --- 2. PANOU CENTRAL (Regiune si Cetate) ---
-            // Folosim mapTint din Zone pentru a personaliza fundalul
+            // --- 2. PANOU CENTRAL ---
             DrawRectangle(50, 160, 950, 500, zone.getTint().Alpha(0.15f));
             raylib::Text::Draw("REGIUNEA: << " + zone.getName() + " >>", 80, 190, 45, BLACK);
 
             if (!city.isOccupied()) {
-                // Utilizam GameEngine::ColorPalette::Enemy() pentru a elimina warning-ul de neutilizare
                 raylib::Text::Draw("AMENINTARE PREZENTA:", 80, 320, 25, GameEngine::ColorPalette::Enemy());
-
                 int ey = 360;
                 for (const auto& e : zone.getGarrison().getSoldiers()) {
-                    // Afisam forta de atac (functie complexa) pentru a ajuta jucatorul
-                    std::string enemyStr = "- " + e.getName() + " | Forta Estimata: " + std::to_string(e.calculateTotalAttack());
+                    // Utilizam getBaseAttackPower() pentru a opri fluctuatia cifrelor
+                    std::string enemyStr = "- " + e.getName() + " | HP: " + std::to_string(e.getHP()) +
+                                           " | Forta: " + std::to_string(e.getBaseAttackPower());
                     raylib::Text::Draw(enemyStr, 100, ey, 20, DARKGRAY);
                     ey += 30;
                 }
             } else {
-                // Detalii avansate despre Cetatea controlata (din clasa City extinsa)
                 raylib::Text::Draw("STARE: CETATE CONTROLATA", 80, 260, 25, DARKGREEN);
-                raylib::Text::Draw("Nivel Dezvoltare: " + std::to_string(city.getLevel()), 80, 310, 22, DARKGRAY);
-                raylib::Text::Draw("Populatie actuala: " + std::to_string(city.getPopulation()) + " cetateni", 80, 345, 22, DARKGRAY);
-                raylib::Text::Draw("Venit din taxe: +" + std::to_string(city.collectTaxes()) + " aur/zi", 80, 380, 22, DARKGRAY);
+                raylib::Text::Draw("Populatie actuala: " + std::to_string(city.getPopulation()) + " cetateni", 80, 310, 22, DARKGRAY);
+                raylib::Text::Draw("Venit estimat: +" + std::to_string(city.collectTaxes()) + " aur/zi", 80, 345, 22, DARKGRAY);
 
-                // Afisare dinamica Cost Upgrade
                 int cost = city.getUpgradeCost();
                 raylib::Color upgColor = (player.getGold() >= cost) ? DARKGREEN : MAROON;
-                raylib::Text::Draw("Cost Upgrade [U]: " + std::to_string(cost) + " Aur", 80, 430, 26, upgColor);
+                raylib::Text::Draw("Cost Upgrade [U]: " + std::to_string(cost) + " Aur (Nivel " + std::to_string(city.getLevel()) + ")", 80, 400, 25, upgColor);
             }
 
-            // --- 3. MENIU RECRUTARE (Dreapta X=1050) ---
+            // --- 3. MENIU RECRUTARE ---
             if (showRecruitment) {
                 DrawRectangle(1050, 160, 500, 420, raylib::Color::RayWhite().Alpha(0.9f));
                 DrawRectangleLines(1050, 160, 500, 420, DARKBLUE);
                 raylib::Text::Draw("CENTRUL DE RECRUTARE", 1080, 180, 28, DARKBLUE);
                 raylib::Text::Draw("1. Infanterie (120g)\n2. Arcasi (150g)\n3. Cavalerie (250g)", 1080, 240, 22, BLACK);
-                raylib::Text::Draw("Unitatile noi sunt adaugate\nimediat in armata ta.", 1080, 350, 18, DARKGRAY);
             }
 
-            // --- 4. ARMATA PROPRIE (Stanga Jos) ---
+            // --- 4. ARMATA PROPRIE ---
             raylib::Text::Draw("TRUPELE TALE:", 50, 680, 25, DARKBLUE);
             int py = 720;
             for (const auto& u : player.getArmy()) {
                 DrawRectangle(50, py, 450, 45, GameEngine::ColorPalette::Sky());
-                // Folosim getMaxHP() aici pentru a elimina warning-ul de neutilizare
                 std::string unitStats = u.getName() + " [Lvl " + std::to_string(u.getLevel()) +
                                        "] HP: " + std::to_string(u.getHP()) + "/" + std::to_string(u.getMaxHP());
                 raylib::Text::Draw(unitStats, 70, py + 12, 18, WHITE);
-                py += 55;
-                if (py > 1100) break; // Siguranta vizuala
+                py += 55; if (py > 1100) break;
             }
 
-            // --- 5. CONSOLA EVENIMENTE (Dreapta Jos) ---
+            // --- 5. CONSOLA EVENIMENTE ---
             DrawRectangle(1050, 680, 500, 440, BLACK);
-            DrawRectangleLines(1050, 680, 500, 440, DARKGRAY);
             int ly = 700;
             for (const auto& m : logger.getMessages()) {
                 raylib::Text::Draw(">> " + m, 1070, ly, 18, GREEN);
                 ly += 25;
             }
 
-            // --- 6. BARA DE EXPLICATII (Footer) ---
+            // --- 6. BARA DE EXPLICATII (FOOTER) ---
             DrawRectangle(0, 1150, 1600, 50, GameEngine::ColorPalette::UIBack());
             raylib::Text::Draw("[N] Zi Noua (Taxe) | [F] Lupta | [U] Upgrade | [R] Meniu Recrutare | [TAB] Schimba Zona", 280, 1165, 20, WHITE);
         }
