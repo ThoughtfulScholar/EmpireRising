@@ -707,7 +707,12 @@ int main() {
     std::cout << "=================================================\n";
 
     // Aceasta linie "ingheata" consola pana apesi Enter
-    std::cin.get();
+    #ifndef GITHUB_ACTIONS
+        std::cout << "Apasati ENTER in consola pentru a porni JOCUL...\n";
+        std::cin.get(); 
+    #else
+        std::cout << "CI Detectat: Se trece direct la initializarea motorului.\n";
+    #endif
     
     // ==========================================================
     // PORNIRE JOC INTERACTIV (RAYLIB)
