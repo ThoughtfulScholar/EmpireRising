@@ -430,7 +430,7 @@ public:
     }
 
     [[nodiscard]] bool isAuthenticated() const { return authenticated; }
-    [[nodiscard]] std::string& getPlayerName() const { return inputBuffer; }
+    [[nodiscard]] std::string getPlayerName() const { return inputBuffer; }
 };
 /**
  * @class Simulation
