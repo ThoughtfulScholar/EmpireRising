@@ -1,7 +1,16 @@
 # EmpireRising
-Fac un joc de strategie medievala asemanator jocului "Age of Conquest". Jucatorul va putea crea unitati folosind aut si sa se lupte cu alte
-unitati inamice cuerind zone de pe harta.
+Empire Rising este un simulator de strategie și gestiune dezvoltat în C++, ce pune bazele unui univers de cucerire și expansiune. Programul orchestrează interacțiunea dintre forța militară, stabilitatea economică și deciziile diplomatice într-un sistem dinamic bazat pe tururi.
 
+Pilonii Jocului:
+Comandă Militară: Gestionezi unități cu ierarhii de nivel, clase tactice și abilități declanșate de probabilități.
+
+Sistem Economic: Piață de echipamente, gestionarea aurului și un tezaur securizat pentru obiecte de legendă.
+
+Lume Vie: Conflicte influențate de teren, misiuni evolutive și relații diplomatice ce pendulează între alianță și război.
+
+Evenimente Globale: Evenimente aleatorii care forțează adaptarea strategiei la nivelul întregului imperiu.
+
+Empire Rising nu este doar un cod, ci un motor de simulare unde deciziile administrative și victoriile pe câmpul de luptă clădesc drumul spre o hegemonie absolută.
 ### Folosiți template-ul corespunzător grupei voastre!
 
 | Laborant  | Link template                                |
