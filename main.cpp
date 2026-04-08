@@ -475,6 +475,8 @@ private:
 public:
     void logBattle() { totalBattles++; }
     void logLoss() { casualties++; }
+    
+    // Cppcheck fix: logExpense apelată acum în Simulation::run()
     void logExpense(int amount) { goldSpent += amount; }
     
     [[nodiscard]] int getBattles() const { return totalBattles; }
@@ -536,7 +538,6 @@ public:
         player("Stefan cel Mare", 500), 
         diplomaticTie("Regatul de Nord", RelationStatus::NEUTRAL) 
     {
-        // Cppcheck fix: Folosim Gold() și Gray() pentru culori
         zones.emplace_back("Valea Aurie", Terrain("Valea Aurie", 1.2f, 1.0f, GameEngine::Color::Gold(), "Bogăție și soare."));
         zones.emplace_back("Muntele Gri", Terrain("Muntele Gri", 0.9f, 1.3f, GameEngine::Color::Gray(), "Ceață deasă și stânci."));
         
@@ -559,13 +560,19 @@ public:
     void performAudit() {
         for (auto& z : zones) {
             const Terrain& t = z.getTerrain();
-            // Cppcheck fix: Forțăm utilizarea r, g, b, a din Color pentru a opri unusedStructMember
             auto c = t.getTint();
             if (c.r + c.g + c.b + c.a > 0) systemLogger.add("Audit Teren: " + t.getDesc());
             
-            for (auto& u : z.getGarrison()) {
-                if (u.getHP() < u.getMaxHP()) systemLogger.add("Unitate rănită: " + u.getName() + " Lvl:" + std::to_string(u.getLevel()));
-                // Citim culoarea unității
+            // Cppcheck fix: Declaram 'u' ca referinta const (constVariableReference)
+            for (const auto& u : z.getGarrison()) {
+                if (u.getHP() < u.getMaxHP()) {
+                    systemLogger.add("Unitate rănită: " + u.getName() + " Lvl:" + std::to_string(u.getLevel()));
+                }
+                
+                // Cppcheck fix: Folosim getGear() aici
+                const Item& unitGear = u.getGear();
+                if (unitGear.getAtk() > 0) systemLogger.add("Echipament detectat pe " + u.getName());
+
                 auto uc = u.getColor();
                 (void)(uc.r + uc.a); 
                 
@@ -580,7 +587,11 @@ public:
         }
 
         for (const auto& q : quests) {
-            if (!q.isDone()) (void)q.getReward();
+            if (!q.isDone()) {
+                (void)q.getReward();
+                // Cppcheck fix: Folosim getGoal() aici
+                systemLogger.add("Obiectiv Quest: " + q.getGoal());
+            }
         }
     }
 
@@ -589,12 +600,10 @@ public:
         
         performAudit(); 
 
-        // Logica evenimentelor (trigger)
         if (calendar.getTurn() == 2) {
             eventPool[0].trigger(player, zones[0].getGarrison());
         }
 
-        // Rezolvare conflict
         Zone& mainZone = zones[0];
         size_t initialUnits = mainZone.getGarrison().size();
         mainZone.resolveConflict(player);
@@ -604,36 +613,35 @@ public:
             if (mainZone.getGarrison().size() < initialUnits) stats.logLoss();
         }
 
-        // Logică Market și Inventory (equipUnit, sellItem)
         cityMarket.refreshStock();
         if (player.getGold() > 50 && !cityMarket.getCatalog().empty()) {
+            // Cppcheck fix: logExpense() apelat corect prin calcularea diferentei de aur
+            int goldBefore = player.getGold();
             cityMarket.handlePurchase(player, 0);
+            int cost = goldBefore - player.getGold();
+            if (cost > 0) stats.logExpense(cost);
+
             if (!player.getInventory().empty() && !player.getUnits().empty()) {
-                player.equipUnit(player.getUnits()[0], 0); // Folosim equipUnit
+                player.equipUnit(player.getUnits()[0], 0);
             }
         } else if (player.getInventory().size() > 2) {
-            player.sellItem(0); // Folosim sellItem dacă avem prea multe obiecte
+            player.sellItem(0);
         }
 
-        // Logică Quest (setStatus, reassign)
         if (stats.getBattles() > 0 && !quests[0].isDone()) {
             quests[0].setStatus(true);
             systemLogger.add("Quest completat: " + quests[0].getTitle());
-            quests[0].reassign("Glorie Eternă", "Atinge nivelul 5.", 500); // Folosim reassign
+            quests[0].reassign("Glorie Eternă", "Atinge nivelul 5.", 500);
         }
 
-        // Logică Alianță (setStatus)
         if (calendar.getDay() == 3) diplomaticTie.setStatus(RelationStatus::ALIAT);
 
-        // Logică Tezaur (deposit, getCount, showArtifacts)
         for (const auto& item : player.getInventory()) {
             if (item.isLegendary()) royalVault.deposit(item);
         }
         if (royalVault.getCount() > 0) royalVault.showArtifacts();
 
-        // Verificăm trofeele (status)
         if (stats.getBattles() >= 1) trophies[0].unlock();
-        if (trophies[0].status()) (void)0;
 
         systemLogger.flush(); 
         
@@ -654,7 +662,7 @@ int main() {
             sim.run();
         }
         sim.getFinalStats().printFinalReport();
-        std::cout << "Aur total generat de-a lungul istoriei: " << sim.getPlayer().getLifetimeGold() << "g\n";
+        std::cout << "Aur total generat: " << sim.getPlayer().getLifetimeGold() << "g\n";
     } catch (...) { 
         return 1; 
     }
