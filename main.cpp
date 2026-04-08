@@ -106,6 +106,10 @@ public:
     }
 
     [[nodiscard]] const std::string& getName() const { return name; }
+    friend std::ostream& operator<<(std::ostream& os, const Ability& ab) {
+        os << "[Abilitate: " << ab.name << " | Sansa: " << (ab.activationChance * 100) << "% | Bonus: +" << ab.bonusDamage << "]";
+        return os;
+    }
 };
 
 /**
@@ -125,6 +129,10 @@ private:
     Ability specialAbility;
 
 public:
+    friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
+        os << "Unitate: " << u.name << " (Lvl " << u.level << ", HP: " << u.hp << "/" << u.maxHp << ") " << u.specialAbility;
+        return os;
+    }
     // Constructor de initializare
     Unit(std::string n, UnitType t, Ability ab)
         : name(std::move(n)), type(t), level(1), xp(0), specialAbility(std::move(ab)) {
@@ -201,6 +209,10 @@ private:
     bool occupied;
 
 public:
+    friend std::ostream& operator<<(std::ostream& os, const City& c) {
+        os << "Oras: " << c.cityName << " (Nivel: " << c.cityLevel << ", Pop: " << c.population << ", Ocupat: " << (c.occupied ? "DA" : "NU") << ")";
+        return os;
+    }
     explicit City(std::string name = "Asezare", int income = 150)
         : cityName(std::move(name)), cityLevel(1), baseIncome(income),
           population(100), occupied(false) {}
@@ -257,7 +269,10 @@ private:
 
 public:
     explicit Garrison(std::string fName = "Aparatori") : faction(std::move(fName)) {}
-
+    friend std::ostream& operator<<(std::ostream& os, const Garrison& g) {
+        os << "Garnizoana: " << g.faction << " (" << g.soldiers.size() << " unitati)";
+        return os;
+    }
     void addDefender(const Unit& u) {
         soldiers.push_back(u);
     }
@@ -291,7 +306,10 @@ private:
 public:
     explicit Player(std::string name = "Comandant", int startingGold = 1000)
         : commanderName(std::move(name)), gold(startingGold) {}
-
+    friend std::ostream& operator<<(std::ostream& os, const Player& p) {
+        os << "Comandant: " << p.commanderName << " | Tezaur: " << p.gold << " aur | Trupe: " << p.army.size();
+        return os;
+    }
     void recruitUnit(const Unit& u) {
         army.push_back(u);
     }
@@ -326,6 +344,10 @@ private:
     raylib::Color mapTint;
 
 public:
+    friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
+        os << "--- Zona: " << z.zoneName << " ---\n  " << z.localCity << "\n  " << z.enemyGarrison;
+        return os;
+    }
     Zone(std::string name, City city, Garrison garrison, raylib::Color tint)
         : zoneName(std::move(name)), localCity(std::move(city)),
           enemyGarrison(std::move(garrison)), mapTint(tint) {}
