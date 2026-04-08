@@ -667,6 +667,48 @@ public:
 };
 
 int main() {
+    // ==========================================================
+    // SECTIUNE OBLIGATORIE: DEMO TEMA 1 (CONSOLA)
+    // ==========================================================
+    std::cout << "========== EMPIRE RISING: DEBUG TEMA 1 ==========\n";
+
+    // 1. Testare Clasa Ability si Operator<<
+    Ability fireStrike("Atac de Foc", 0.4f, 30);
+    std::cout << fireStrike << "\n";
+
+    // 2. Testare Clasa Unit + Rule of Three (Cerinta Critica)
+    Unit u1("Garda Imperiala", UnitType::INFANTERIE, fireStrike);
+    std::cout << "Original: " << u1 << "\n";
+
+    // Constructor de copiere
+    Unit u2 = u1; 
+    std::cout << "Copie (Ctor): " << u2 << "\n";
+
+    // Operator= de copiere
+    Unit u3("Recrut", UnitType::ARCASI, Ability());
+    u3 = u1; 
+    std::cout << "Copie (Op=): " << u3 << "\n";
+
+    // 3. Testare Clasa City si funcția netriviala Upgrade
+    City testCity("Testia", 100);
+    int testGold = 1000;
+    std::cout << "Inainte de upgrade: " << testCity << " | Aur: " << testGold << "\n";
+    testCity.setOccupied(true);
+    testCity.upgrade(testGold); // Apel functie complexa
+    std::cout << "Dupa upgrade: " << testCity << " | Aur ramas: " << testGold << "\n";
+
+    // 4. Testare Player si Zone (Compunere)
+    Player p("Comandant Demo", 500);
+    p.recruitUnit(u1);
+    std::cout << p << "\n";
+
+    std::cout << "=================================================\n";
+    std::cout << "Apasati orice tasta in consola pentru a porni JOCUL...\n";
+    // Optional: poti lasa std::cin.get(); daca vrei sa fii sigur ca vede log-ul
+    
+    // ==========================================================
+    // PORNIRE JOC INTERACTIV (RAYLIB)
+    // ==========================================================
     try {
         Simulation game;
         game.run();
@@ -674,5 +716,6 @@ int main() {
         std::cerr << "Eroare critica: " << e.what() << std::endl;
         return 1;
     }
+
     return 0;
 }
