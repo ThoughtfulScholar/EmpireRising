@@ -703,8 +703,11 @@ int main() {
     std::cout << p << "\n";
 
     std::cout << "=================================================\n";
-    std::cout << "Apasati orice tasta in consola pentru a porni JOCUL...\n";
-    // Optional: poti lasa std::cin.get(); daca vrei sa fii sigur ca vede log-ul
+    std::cout << "Apasati enter in consola pentru a porni JOCUL...\n";
+    std::cout << "=================================================\n";
+
+    // Aceasta linie "ingheata" consola pana apesi Enter
+    std::cin.get();
     
     // ==========================================================
     // PORNIRE JOC INTERACTIV (RAYLIB)
