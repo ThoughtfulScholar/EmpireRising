@@ -196,4 +196,6 @@ The [template repository](https://github.com/mcmarius/oop-template) itself is li
 
 ## Resurse
 
-- adăugați trimiteri **detaliate** către resursele externe care v-au ajutat sau pe care le-ați folosit
+Raylib - Utilizată pentru nucleul grafic al jocului, gestionarea ferestrei și randarea 2D.
+
+raylib-cpp - Un wrapper C++ object-oriented peste Raylib, care a facilitat utilizarea conceptelor de POO (constructori/destructori) în context grafic.
