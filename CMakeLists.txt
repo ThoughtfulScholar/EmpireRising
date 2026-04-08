@@ -71,13 +71,8 @@ add_executable(${MAIN_EXECUTABLE_NAME}
     main.cpp
 )
 target_sources(${MAIN_EXECUTABLE_NAME}
-        PRIVATE
-        src/Unit.cpp
-        src/EmpireEngine.cpp
-        src/Player.cpp
-        src/City.cpp
-        src/Map.cpp
-        # src/Example.cpp  <-- Poți șterge sau comenta linia asta dacă ai șters fișierul
+    PRIVATE
+        src/Example.cpp
 )
 
 # NOTE: Add all defined targets (e.g. executables, libraries, etc. )
@@ -99,8 +94,7 @@ target_include_directories(${MAIN_EXECUTABLE_NAME} SYSTEM PRIVATE
     ${raylib-cpp_SOURCE_DIR}/include
 )
 target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE
-        raylib
-        Threads::Threads
+    raylib Threads::Threads
 )
 
 if(APPLE)
