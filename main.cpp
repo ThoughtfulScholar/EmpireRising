@@ -504,15 +504,6 @@ private:
         worldMap.emplace_back("Tundra Oarba", City("Frosthelm", 450), g4, SKYBLUE);
     }
 
-public:
-    Simulation()
-        : window(1600, 1200, "EMPIRE RISING"),
-          currentState(GameState::LOGIN)
-    {
-        SetTargetFPS(60);
-        initWorld();
-    }
-
     void handleInput() {
         if (IsKeyPressed(KEY_ESCAPE)) window.Close();
 
@@ -654,6 +645,15 @@ public:
             raylib::Text::Draw("[N] Zi Noua | [F] Lupta | [U] Upgrade Oras | [R] Recrutare | [TAB] Regiuni", 350, 1165, 20, WHITE);
         }
         EndDrawing();
+    }
+    
+public:
+    Simulation()
+        : window(1600, 1200, "EMPIRE RISING"),
+          currentState(GameState::LOGIN)
+    {
+        SetTargetFPS(60);
+        initWorld();
     }
 
     void run() {
