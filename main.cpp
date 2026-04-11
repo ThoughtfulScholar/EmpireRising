@@ -703,7 +703,7 @@ int main() {
     Unit u3("Recrut", UnitType::ARCASI, Ability());
     u3 = u1;      // Copy Assignment
 
-    u1.calculateTotalAttack();
+    int damagePotential = u1.calculateTotalAttack();
     u1.takeDamage(50);
     u1.gainXP(120);
     std::cout << "Metode Unit: HP=" << u1.getHP() << "/" << u1.getMaxHP()
@@ -764,22 +764,19 @@ int main() {
               << ", Buffer=" << lm.getPlayerName() << "\n";
     if (false) { lm.update(); lm.draw(); } // Apel tehnic pentru functii grafice
 
-   std::cout << "=================================================\n";
+    std::cout << "=================================================\n";
 
-    // PROTECȚIE PENTRU CI:
-    // Pe GitHub Actions nu pornim Simulation pentru că serverul nu are placă grafică/monitor
-    #ifdef GITHUB_ACTIONS
-        std::cout << "CI Detectat: Testele de logică au reușit. Se omite pornirea ferestrei grafice.\n";
-        return 0; 
+    #ifndef GITHUB_ACTIONS
+        std::cout << "APASATI ENTER PENTRU A PORNI JOCUL (Raylib)...";
+        std::cin.get();
     #endif
 
-    // CODUL DE MAI JOS SE VA EXECUTA DOAR LA TINE PE CALCULATOR
-    std::cout << "APASATI ENTER PENTRU A PORNI JOCUL (Raylib)...";
-    std::cin.get();
-
+    // ==========================================================
+    // PORNIRE JOC INTERACTIV (RAYLIB)
+    // ==========================================================
     try {
         Simulation game;
-        std::cout << game << std::endl; 
+        std::cout << game << std::endl; // Test operator<< Simulation
         game.run();
     } catch (const std::exception& e) {
         std::cerr << "Eroare critica: " << e.what() << std::endl;
