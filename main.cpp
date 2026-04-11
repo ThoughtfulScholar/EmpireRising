@@ -687,56 +687,96 @@ public:
 int main() {
     // ==========================================================
     // SECTIUNE OBLIGATORIE: DEMO TEMA 1 (CONSOLA)
+    // Se apeleaza TOATE functiile membre publice conform cerintei.
     // ==========================================================
     std::cout << "========== EMPIRE RISING: DEBUG TEMA 1 ==========\n";
 
-    // 1. Testare Clasa Ability si Operator<<
+    // 1. Testare Ability
     Ability fireStrike("Atac de Foc", 0.4f, 30);
     std::cout << fireStrike << "\n";
+    std::cout << "Metode Ability: Name=" << fireStrike.getName()
+              << ", Trigger=" << fireStrike.trigger() << "\n";
 
-    // 2. Testare Clasa Unit + Rule of Three (Cerinta Critica)
+    // 2. Testare Unit + RULE OF THREE
     Unit u1("Garda Imperiala", UnitType::INFANTERIE, fireStrike);
-    std::cout << "Original: " << u1 << "\n";
-
-    // Constructor de copiere
-    Unit u2 = u1; 
-    std::cout << "Copie (Ctor): " << u2 << "\n";
-
-    // Operator= de copiere
+    Unit u2 = u1; // Copy Ctor
     Unit u3("Recrut", UnitType::ARCASI, Ability());
-    u3 = u1; 
-    std::cout << "Copie (Op=): " << u3 << "\n";
+    u3 = u1;      // Copy Assignment
 
-    // 3. Testare Clasa City si funcția netriviala Upgrade
-    City testCity("Testia", 100);
-    int testGold = 1000;
-    std::cout << "Inainte de upgrade: " << testCity << " | Aur: " << testGold << "\n";
+    u1.calculateTotalAttack();
+    u1.takeDamage(50);
+    u1.gainXP(120);
+    std::cout << "Metode Unit: HP=" << u1.getHP() << "/" << u1.getMaxHP()
+              << ", Lvl=" << u1.getLevel() << ", Viu=" << u1.isAlive() << "\n";
+
+    // 3. Testare City
+    City testCity("Veridonia", 200);
+    int gold = 1000;
     testCity.setOccupied(true);
-    testCity.upgrade(testGold); // Apel functie complexa
-    std::cout << "Dupa upgrade: " << testCity << " | Aur ramas: " << testGold << "\n";
+    testCity.growPopulation();
+    testCity.upgrade(gold);
+    std::cout << "Metode City: Name=" << testCity.getName()
+              << ", Lvl=" << testCity.getLevel()
+              << ", Pop=" << testCity.getPopulation()
+              << ", CostUp=" << testCity.getUpgradeCost()
+              << ", Taxes=" << testCity.collectTaxes() << "\n";
 
-    // 4. Testare Player si Zone (Compunere)
-    Player p("Comandant Demo", 500);
-    p.recruitUnit(u1);
-    std::cout << p << "\n";
+    // 4. Testare Garrison
+    Garrison g1("Legiunea Neagra");
+    g1.addDefender(u1);
+    g1.cleanup();
+    std::cout << "Metode Garrison: Defeated=" << g1.isDefeated()
+              << ", SoldiersCount=" << g1.getSoldiers().size() << "\n";
+    if(g1.getFrontUnit()) std::cout << "Front Unit: " << g1.getFrontUnit()->getName() << "\n";
+
+    // 5. Testare Player
+    Player p("Cezar", 2000);
+    p.recruitUnit(u2);
+    p.earnGold(500);
+    p.spendGold(100);
+    p.updateArmyStatus();
+    std::cout << "Metode Player: Name=" << p.getName()
+              << ", Gold=" << p.getGold()
+              << ", ArmySize=" << p.getArmy().size() << "\n";
+
+    // 6. Testare Zone (Compunere & Getters)
+    Zone z1("Valea Sperantei", testCity, g1, raylib::Color::Green());
+    std::cout << z1 << "\n";
+    std::cout << "Metoda complexa Zone (Battle): " << z1.executeBattleRound(p) << "\n";
+    std::cout << "Acces prin Zone: Oras=" << z1.getCity().getName()
+              << ", Inamici=" << z1.getGarrison().getSoldiers().size() << "\n";
+    std::cout << "Tint Map: R=" << (int)z1.getTint().r << "\n";
+    z1.getCity().setOccupied(false);
+
+    // 7. Testare Utilitare (RecruitmentCenter & RandomGen & Logger)
+    GameEngine::Logger log;
+    log.add("Test log");
+    RecruitmentCenter::Hire(p, UnitType::ARCASI, log);
+    std::cout << log << "\n";
+    std::cout << "Numar mesaje in log: " << log.getMessages().size() << "\n";
+    std::cout << "Random Test: " << GameEngine::RandomGen::GetFloat(0, 1) << "\n";
+
+
+    // 8. Testare LoginManager
+    LoginManager lm;
+    std::cout << lm << "\n";
+    std::cout << "Login Debug: Autentificat=" << lm.isAuthenticated()
+              << ", Buffer=" << lm.getPlayerName() << "\n";
+    if (false) { lm.update(); lm.draw(); } // Apel tehnic pentru functii grafice
 
     std::cout << "=================================================\n";
-    std::cout << "Apasati enter in consola pentru a porni JOCUL...\n";
-    std::cout << "=================================================\n";
 
-    // Aceasta linie "ingheata" consola pana apesi Enter
     #ifndef GITHUB_ACTIONS
-        std::cout << "Apasati ENTER in consola pentru a porni JOCUL...\n";
-        std::cin.get(); 
-    #else
-        std::cout << "CI Detectat: Se trece direct la initializarea motorului.\n";
+        std::cout << "APASATI ENTER PENTRU A PORNI JOCUL (Raylib)...";
+        std::cin.get();
     #endif
-    
+
     // ==========================================================
     // PORNIRE JOC INTERACTIV (RAYLIB)
     // ==========================================================
     try {
         Simulation game;
+        std::cout << game << std::endl; // Test operator<< Simulation
         game.run();
     } catch (const std::exception& e) {
         std::cerr << "Eroare critica: " << e.what() << std::endl;
