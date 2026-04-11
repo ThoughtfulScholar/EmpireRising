@@ -226,6 +226,9 @@ public:
      * @brief Cresterea nivelului orasului folosind aurul furnizat.
      */
     bool upgrade(int& playerGold) {
+        if (!occupied) {
+            return false;
+        }
         const int cost = getUpgradeCost();
         if (playerGold >= cost) {
             playerGold -= cost;
@@ -544,13 +547,18 @@ private:
         }
 
         if (IsKeyPressed(KEY_U)) {
-            int currentGold = player.getGold();
-            if (currentZone.getCity().upgrade(currentGold)) {
-                player.earnGold(0); // Refresh vizual
-                player.spendGold(player.getGold() - currentGold); // Ajustare aur
-                logger.add("Upgrade: " + currentZone.getCity().getName() + " Nivel " + std::to_string(currentZone.getCity().getLevel()));
+            auto& currentCity = currentZone.getCity(); // Luăm referință la oraș
+
+            if (!currentCity.isOccupied()) {
+                logger.add("Eroare: Nu poti upgrada un oras inamic!");
             } else {
-                logger.add("Fonduri insuficiente pentru upgrade!");
+                int currentGold = player.getGold();
+                if (currentCity.upgrade(currentGold)) {
+                    player.spendGold(player.getGold() - currentGold); // Sincronizăm aurul
+                    logger.add("Upgrade: " + currentCity.getName() + " la Nivel " + std::to_string(currentCity.getLevel()));
+                } else {
+                    logger.add("Fonduri insuficiente pentru upgrade!");
+                }
             }
         }
 
@@ -738,7 +746,7 @@ int main() {
     p.updateArmyStatus();
     std::cout << "Metode Player: Name=" << p.getName()
               << ", Gold=" << p.getGold()
-              << ", ArmySize=" << p.getArmy().size() 
+              << ", ArmySize=" << p.getArmy().size()
               << ", Prima unitate=" << (p.getArmy().empty() ? "Niciuna" : p.getArmy()[0].getName()) << "\n";
 
     // 6. Testare Zone (Compunere & Getters)
