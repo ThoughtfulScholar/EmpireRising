@@ -148,7 +148,17 @@ public:
     }
 
     // --- RULE OF THREE ---
-    Unit(const Unit& other) = default;
+    Unit(const Unit& other) 
+        : name(other.name), 
+          type(other.type), 
+          hp(other.hp), 
+          maxHp(other.maxHp), 
+          atk(other.atk), 
+          def(other.def), 
+          level(other.level), 
+          xp(other.xp), 
+          specialAbility(other.specialAbility) {
+    }
 
     Unit& operator=(const Unit& other) {
         if (this != &other) {
@@ -165,7 +175,9 @@ public:
         return *this;
     }
 
-    ~Unit() = default;
+    ~Unit() {
+        
+    }
 
     // --- LOGICA DE LUPTA ---
     [[nodiscard]] int calculateTotalAttack() const {
