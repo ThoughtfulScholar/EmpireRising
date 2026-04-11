@@ -720,7 +720,7 @@ int main() {
               << ", Lvl=" << testCity.getLevel()
               << ", Pop=" << testCity.getPopulation()
               << ", CostUp=" << testCity.getUpgradeCost()
-              << ", Taxes=" << testCity.collectTaxes() << << ", Ocupat=" << testCity.isOccupied() << "\n";
+              << ", Taxes=" << testCity.collectTaxes() << ", Ocupat=" << testCity.isOccupied() << "\n";
 
     // 4. Testare Garrison
     Garrison g1("Legiunea Neagra");
@@ -748,7 +748,7 @@ int main() {
     std::cout << "Acces prin Zone: Oras=" << z1.getCity().getName()
               << ", Inamici=" << z1.getGarrison().getSoldiers().size() << "\n"
                 << ", Culoare R=" << (int)z1.getTint().r << "\n";;
-    std::cout << "Tint Map: R=" << (int)z1.getTint().r << "\n";
+    //std::cout << "Tint Map: R=" << (int)z1.getTint().r << "\n";
     z1.getCity().setOccupied(false);
 
     // 7. Testare Utilitare (RecruitmentCenter & RandomGen & Logger)
