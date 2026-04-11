@@ -704,6 +704,7 @@ int main() {
     u3 = u1;      // Copy Assignment
 
     int damagePotential = u1.calculateTotalAttack();
+    cout << damagePotential << "\n";
     u1.takeDamage(50);
     u1.gainXP(120);
     std::cout << "Metode Unit: HP=" << u1.getHP() << "/" << u1.getMaxHP()
