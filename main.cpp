@@ -716,12 +716,11 @@ int main() {
     testCity.setOccupied(true);
     testCity.growPopulation();
     testCity.upgrade(gold);
-    bool occupiedStatus = testCity.isOccupied();
     std::cout << "Metode City: Name=" << testCity.getName()
               << ", Lvl=" << testCity.getLevel()
               << ", Pop=" << testCity.getPopulation()
               << ", CostUp=" << testCity.getUpgradeCost()
-              << ", Taxes=" << testCity.collectTaxes() << "\n";
+              << ", Taxes=" << testCity.collectTaxes() << << ", Ocupat=" << testCity.isOccupied() << "\n";
 
     // 4. Testare Garrison
     Garrison g1("Legiunea Neagra");
@@ -737,18 +736,18 @@ int main() {
     p.earnGold(500);
     p.spendGold(100);
     p.updateArmyStatus();
-    const auto& units = p.getArmy();
     std::cout << "Metode Player: Name=" << p.getName()
               << ", Gold=" << p.getGold()
-              << ", ArmySize=" << p.getArmy().size() << "\n";
+              << ", ArmySize=" << p.getArmy().size() 
+              << ", Prima unitate=" << (p.getArmy().empty() ? "Niciuna" : p.getArmy()[0].getName()) << "\n";
 
     // 6. Testare Zone (Compunere & Getters)
     Zone z1("Valea Sperantei", testCity, g1, raylib::Color::Green());
     std::cout << z1 << "\n";
     std::cout << "Metoda complexa Zone (Battle): " << z1.executeBattleRound(p) << "\n";
-    const auto& gar = z1.getGarrison();
     std::cout << "Acces prin Zone: Oras=" << z1.getCity().getName()
-              << ", Inamici=" << z1.getGarrison().getSoldiers().size() << "\n";
+              << ", Inamici=" << z1.getGarrison().getSoldiers().size() << "\n"
+                << ", Culoare R=" << (int)z1.getTint().r << "\n";;
     std::cout << "Tint Map: R=" << (int)z1.getTint().r << "\n";
     z1.getCity().setOccupied(false);
 
