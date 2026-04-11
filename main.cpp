@@ -716,6 +716,7 @@ int main() {
     testCity.setOccupied(true);
     testCity.growPopulation();
     testCity.upgrade(gold);
+    bool occupiedStatus = testCity.isOccupied();
     std::cout << "Metode City: Name=" << testCity.getName()
               << ", Lvl=" << testCity.getLevel()
               << ", Pop=" << testCity.getPopulation()
@@ -736,6 +737,7 @@ int main() {
     p.earnGold(500);
     p.spendGold(100);
     p.updateArmyStatus();
+    const auto& units = p.getArmy();
     std::cout << "Metode Player: Name=" << p.getName()
               << ", Gold=" << p.getGold()
               << ", ArmySize=" << p.getArmy().size() << "\n";
@@ -744,6 +746,7 @@ int main() {
     Zone z1("Valea Sperantei", testCity, g1, raylib::Color::Green());
     std::cout << z1 << "\n";
     std::cout << "Metoda complexa Zone (Battle): " << z1.executeBattleRound(p) << "\n";
+    const auto& gar = z1.getGarrison();
     std::cout << "Acces prin Zone: Oras=" << z1.getCity().getName()
               << ", Inamici=" << z1.getGarrison().getSoldiers().size() << "\n";
     std::cout << "Tint Map: R=" << (int)z1.getTint().r << "\n";
