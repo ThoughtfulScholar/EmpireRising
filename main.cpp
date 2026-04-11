@@ -764,19 +764,22 @@ int main() {
               << ", Buffer=" << lm.getPlayerName() << "\n";
     if (false) { lm.update(); lm.draw(); } // Apel tehnic pentru functii grafice
 
-    std::cout << "=================================================\n";
+   std::cout << "=================================================\n";
 
-    #ifndef GITHUB_ACTIONS
-        std::cout << "APASATI ENTER PENTRU A PORNI JOCUL (Raylib)...";
-        std::cin.get();
+    // PROTECȚIE PENTRU CI:
+    // Pe GitHub Actions nu pornim Simulation pentru că serverul nu are placă grafică/monitor
+    #ifdef GITHUB_ACTIONS
+        std::cout << "CI Detectat: Testele de logică au reușit. Se omite pornirea ferestrei grafice.\n";
+        return 0; 
     #endif
 
-    // ==========================================================
-    // PORNIRE JOC INTERACTIV (RAYLIB)
-    // ==========================================================
+    // CODUL DE MAI JOS SE VA EXECUTA DOAR LA TINE PE CALCULATOR
+    std::cout << "APASATI ENTER PENTRU A PORNI JOCUL (Raylib)...";
+    std::cin.get();
+
     try {
         Simulation game;
-        std::cout << game << std::endl; // Test operator<< Simulation
+        std::cout << game << std::endl; 
         game.run();
     } catch (const std::exception& e) {
         std::cerr << "Eroare critica: " << e.what() << std::endl;
