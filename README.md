@@ -9,6 +9,21 @@
 * **Evenimente Globale:** Fenomene aleatorii care apar neașteptat, forțând adaptarea strategiei la nivelul întregului imperiu.
 
 **Empire Rising** nu este doar un cod, ci un motor de simulare unde deciziile administrative și victoriile pe câmpul de luptă clădesc drumul spre o hegemonie absolută.
+
+## Tema 1 - Detalii Implementare
+
+- **Minim 3-4 clase cu compunere:** - `Zone` (compune `City` și `Garrison`)
+  - `Garrison` (compune `Unit`)
+  - `Unit` (compune `Ability`)
+- **Constructori de inițializare:** Toate clasele (ex: `Unit(name, type, ability)`)
+- **Rule of Three:** Implementată în clasa `Unit` (Constructor copiere, `operator=`, Destructor).
+- **Operator<<:** Implementat pentru toate clasele (`Unit`, `City`, `Zone`, etc.) pentru afișare recursivă.
+- **Funcții netriviale:**
+  - `Zone::executeBattleRound`: Logica de luptă și calcul daune.
+  - `City::upgrade`: Gestionare economie și upgrade-uri progresive.
+  - `Unit::gainXP`: Sistem de level-up.
+- **Const-corectitudine:** Folosit `const` și `[[nodiscard]]` peste tot unde starea nu se modifică.
+
 ### Folosiți template-ul corespunzător grupei voastre!
 
 | Laborant  | Link template                                |
@@ -196,4 +211,6 @@ The [template repository](https://github.com/mcmarius/oop-template) itself is li
 
 ## Resurse
 
-- adăugați trimiteri **detaliate** către resursele externe care v-au ajutat sau pe care le-ați folosit
+Raylib - Utilizată pentru nucleul grafic al jocului, gestionarea ferestrei și randarea 2D.
+
+raylib-cpp - Un wrapper C++ object-oriented peste Raylib, care a facilitat utilizarea conceptelor de POO (constructori/destructori) în context grafic.
