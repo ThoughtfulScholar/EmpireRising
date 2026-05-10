@@ -870,40 +870,74 @@ private:
     }
 
     void initWorld() {
+        int width = 30;
+        int height = 20;
+
+        // A. GENERARE TEREN NATURAL (Munți, Ape, Paduri)
+        for (int i = 0; i < 15; ++i) {
+            int tx = GameEngine::RandomGen::GetInt(2, width - 3);
+            int ty = GameEngine::RandomGen::GetInt(2, height - 3);
+
+            // Alegem un tip de teren folosind Enum-ul tău TerrainType
+            int r = GameEngine::RandomGen::GetInt(1, 3);
+            TerrainType t;
+
+            if (r == 1)      t = TerrainType::MOUNTAIN;
+            else if (r == 2) t = TerrainType::WATER;
+            else             t = TerrainType::FOREST;
+
+            // Creăm o zonă compactă de 3x3 de acel tip
+            for (int dx = -1; dx <= 1; ++dx) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    int nx = tx + dx;
+                    int ny = ty + dy;
+                    // Verificăm să fim în interiorul hărții
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        worldMap.setTile(nx, ny, t);
+                    }
+                }
+            }
+        }
+
+        // B. PLASARE JUCĂTOR ȘI ORAȘE
         int startX = player.getPos().first;
         int startY = player.getPos().second;
-
-        // 1. Generăm între 4 și 8 orașe
         int numCities = GameEngine::RandomGen::GetInt(4, 8);
 
         for (int i = 0; i < numCities; ++i) {
             int cx, cy;
-            // Evităm spawn-ul exact peste jucător
+            // Ne asigurăm că orașul nu apare fix peste jucător la început
             do {
-                cx = GameEngine::RandomGen::GetInt(2, 27);
-                cy = GameEngine::RandomGen::GetInt(2, 17);
+                cx = GameEngine::RandomGen::GetInt(2, width - 3);
+                cy = GameEngine::RandomGen::GetInt(2, height - 3);
             } while (cx == startX && cy == startY);
 
-            // 2. Garantăm drumul (Săpăm prin munți/apă)
+            // C. DRUMURILE: "sapă" prin orice teren pentru a garanta accesul
+            // Aici TerrainType::PATH (sau cum se numește la tine tipul pentru drum)
             worldMap.createPath(startX, startY, cx, cy);
 
             std::string zName = "Provincia " + std::to_string(i + 1);
             City c("Cetatea " + std::to_string(i + 1), cx, cy);
 
-            // Primele 2 orașe sunt ale jucătorului (conform cerinței)
+            // Primele 2 orașe sunt deja cucerite (aliați), restul sunt inamice
             if (i < 2) {
                 c.setOccupied(true);
-                regions.emplace_back(zName, c, Garrison("Garda Locala"), GREEN);
+                regions.emplace_back(zName, c, Garrison("Garda"), GREEN);
             } else {
                 Garrison g("Ocupanti");
-                g.addDefender(UnitFactory::CreateUnit(UnitType::INFANTERIE, "Mercenar Inamic"));
+                // Adăugăm un apărător de bază folosind Factory-ul tău
+                g.addDefender(UnitFactory::CreateUnit(UnitType::INFANTERIE, "Mercenar"));
                 regions.emplace_back(zName, c, std::move(g), RED);
             }
         }
 
-        // 3. Spawn inițial de armate inamice
-        for(int i = 0; i < 3; ++i) spawnEnemy();
+        // D. SPAWN INAMICI INIȚIALI
+        for (int i = 0; i < 3; ++i) {
+            spawnEnemy();
+        }
     }
+
+
     void spawnEnemy() {
         int x, y;
         // Căutăm un loc liber pe iarbă sau drum
@@ -1135,6 +1169,11 @@ public:
                     ::DrawText(msg.c_str(), sbX + 20, logY, 14, (msg.find("![") != std::string::npos) ? RED : GREEN);
                     logY += 20;
                 }
+                // --- C. FOOTER (INSTRUCȚIUNI) ---
+                // Îl desenăm întotdeauna în modul SIMULATION pentru a ghida jucătorul
+                DrawRectangle(0, 1000 - FOOTER_HEIGHT, 1600, FOOTER_HEIGHT, BLACK);
+                ::DrawText("[W,A,S,D] Miscare | [F] Atac | [U] Upgrade (TAB selection) | [R] Recrutare | [TAB] Info Oras | [N] Zi Noua", 40, 940, 18, RAYWHITE);
+                ::DrawText(TextFormat("ZIUA %i / %i", clock.getDay(), MAX_DAYS), 1420, 940, 20, (clock.getDay() > MAX_DAYS - 5) ? RED : LIGHTGRAY);
 
                 // --- C. OVERLAYS (Victorie / Înfrângere) ---
                 if (gameWon) {
