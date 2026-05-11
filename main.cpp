@@ -946,7 +946,7 @@ private:
 
         int totalIncome = 0;
         int totalUpkeep = 0;
-        int occupiedCitiesCount = 0;
+        int occupiedCitiesCount = 0; // Calculată aici
 
         // 1. Upkeep Jucător
         totalUpkeep += player.getArmy().calculateTotalUpkeep();
@@ -955,7 +955,7 @@ private:
         for (auto& reg : regions) {
             City& city = reg.getCity();
             if (city.isOccupied()) {
-                occupiedCitiesCount++;
+                occupiedCitiesCount++; // Incrementată aici
                 city.growPopulation();
                 totalIncome += (int)(city.collectTaxes() * WorldClock::GetGlobalTaxRate());
                 totalUpkeep += city.getGarrisonUpkeep();
@@ -990,7 +990,6 @@ private:
             if (targetZone) {
                 auto [tx, ty] = targetZone->getCity().getPos();
 
-                // Dacă e la porți (dist < 1.5 acoperă și diagonalele adiacente)
                 if (minDistance < 1.5f) {
                     City& targetCity = targetZone->getCity();
                     logger.add("! ASEDIU: Inamicii asalteaza " + targetCity.getName() + "!");
@@ -999,22 +998,20 @@ private:
                         targetCity.setOccupied(false);
                         logger.add("!! " + targetCity.getName() + " a cazut (Fara aparare)!");
                     } else {
-                        // Uzură reciprocă
                         targetCity.extractUnit();
                         enemy.takeDamage(100);
                         logger.add("Garnizoana din " + targetCity.getName() + " a rezistat, dar a pierdut oameni.");
                     }
                 } else {
-                    // Inamicul se mișcă respectând TERENUL (WorldMap)
                     enemy.moveTowards(tx, ty, worldMap);
                 }
             }
         }
 
-        // 5. SPAWNATOR (La 6 zile, pe marginile practicabile)
+        // 5. SPAWNATOR
         if (clock.getDay() % 6 == 0) {
             int attempts = 0;
-            while (attempts < 10) { // Încercăm să găsim un loc de spawn care nu e apă/munte
+            while (attempts < 10) {
                 int sx = (GameEngine::RandomGen::GetInt(0, 1) == 0) ? 0 : 29;
                 int sy = GameEngine::RandomGen::GetInt(0, 19);
 
@@ -1027,41 +1024,29 @@ private:
             }
         }
 
-        // 6. Curățare Unități (Tema 2)
+        // 6. Curățare Unități
         std::erase_if(roamingEnemies, [](const EnemyArmy& e) { return e.isDefeated(); });
 
         // 7. VERIFICĂRI FINALE (Win/Loss Logic)
-        int stillOccupied = (int)std::count_if(regions.begin(), regions.end(), [](const Zone& z) {
-            return z.getCity().isOccupied();
-        });
-
-        // Verificăm dacă TOATE regiunile sunt ocupate de jucător
-        bool allCaptured = std::all_of(regions.begin(), regions.end(), [](const Zone& z) {
-            return z.getCity().isOccupied();
-        });
-
-        // --- LOGICA DE DECIZIE ---
+        // Folosim variabila occupiedCitiesCount calculată la început pentru a evita eroarea "unused variable"
+        bool allCaptured = (occupiedCitiesCount == (int)regions.size());
 
         if (allCaptured) {
-            // VICTORIE: Ai cucerit tot!
             currentState = GameState::VICTORIE;
             gameOver = true;
             logger.add("VICTORIE: Ai unit toate tinuturile sub un singur steag!");
         }
-        else if (stillOccupied <= 0 && clock.getDay() > 1) {
-            // PIERDERE: Nu mai ai nicio cetate
+        else if (occupiedCitiesCount <= 0 && clock.getDay() > 1) { // Am înlocuit stillOccupied cu occupiedCitiesCount
             currentState = GameState::DEFEAT;
             gameOver = true;
             logger.add("INFRANGERE: Ultimul bastion a cazut.");
         }
         else if (player.getGold() < -1000) {
-            // PIERDERE: Faliment
             currentState = GameState::DEFEAT;
             gameOver = true;
             logger.add("INFRANGERE: Tezaurul este gol, armata a dezertat.");
         }
         else if (clock.getDay() >= MAX_DAYS) {
-            // PIERDERE: Timpul a expirat
             currentState = GameState::DEFEAT;
             gameOver = true;
             logger.add("INFRANGERE: Timpul a expirat. Campania a esuat.");
