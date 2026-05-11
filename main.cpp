@@ -94,6 +94,7 @@ int GameEngine::Logger::totalLogEntries = 0;
 // ==========================================================
 // 4. ABILITY (Compunere - Cerință Tema 1)
 // ==========================================================
+/*
 class Ability {
 private:
     std::string name;
@@ -111,6 +112,7 @@ public:
 
     [[nodiscard]] const std::string& getName() const { return name; }
 };
+*/
 
 // ==========================================================
 // 5. UNIT (Clasă de Bază Polimorfică - Cerințe Tema 2)
@@ -203,10 +205,10 @@ public:
     // --- GETTERI ---
     [[nodiscard]] const std::string& getName() const { return name; }
     [[nodiscard]] int getHP() const { return hp; }
-    [[nodiscard]] int getMaxHP() const { return maxHp; }
+    //[[nodiscard]] int getMaxHP() const { return maxHp; }
     [[nodiscard]] int getAtk() const { return atk; }
     [[nodiscard]] int getUpkeep() const { return upkeepCost; }
-    [[nodiscard]] int getLevel() const { return level; }
+    // [[nodiscard]] int getLevel() const { return level; }
 
     // --- METODE STATICE ---
     static int getTotalUnits() {
@@ -248,16 +250,16 @@ public:
 
 class GarrisonGuard : public Unit {
 public:
-    GarrisonGuard(std::string n) : Unit(n, 250, 40, 15) {}
+    explicit GarrisonGuard(const std::string& n) : Unit(n, 250, 40, 15) {}
     std::unique_ptr<Unit> clone() const override { return std::make_unique<GarrisonGuard>(*this); }
 };
 
 class Hero : public Unit {
 public:
     // Am scos 'int d' din lista de parametri
-    Hero(std::string n, int h, int a, int u) : Unit(n, h, a, u) {}
+    Hero(const std::string& n, int h, int a, int u) : Unit(n, h, a, u) {}
     std::unique_ptr<Unit> clone() const override { return std::make_unique<Hero>(*this); }
-    void inspire() {}
+    static void inspire() {}
 };
 // ==========================================================
 // 7. UNIT FACTORY (Cerință Tema 2 - Creare Polimorfică)
@@ -572,9 +574,9 @@ public:
         return u;
     }
 
-    void clearGarrison() {
-        garrison.clear();
-    }
+    // void clearGarrison() {
+    //     garrison.clear();
+    // }
 
     // --- GETTERI ---
 
@@ -804,18 +806,18 @@ public:
     [[nodiscard]] const ArmyManager& getArmy() const { return army; }
     [[nodiscard]] std::pair<int, int> getPos() const { return {posX, posY}; }
 };
-
+/*
 class Enemy {
 private:
     int x, y;
-    int strength;
+    //int strength;
 public:
     Enemy(int x, int y, int strength) : x(x), y(y), strength(strength) {}
     int getX() const { return x; }
     int getY() const { return y; }
-    int getStrength() const { return strength; }
+    //int getStrength() const { return strength; }
 };
-
+*/
 class GarrisonUnit : public Unit {
 public:
     GarrisonUnit() : Unit("Garnizoana", 200, 30, 10) {} // Nume, HP, Atac, Upkeep mic
@@ -885,9 +887,9 @@ private:
         return upkeep;
     }
 
-    [[nodiscard]] int getNetGold() const {
-        return calculateTotalIncome() - calculateTotalUpkeep();
-    }
+    // [[nodiscard]] int getNetGold() const {
+    //     return calculateTotalIncome() - calculateTotalUpkeep();
+    // }
 
     // --- INIȚIALIZARE LUME (Drumuri Garantate) ---
     void initWorld() {
@@ -925,18 +927,18 @@ private:
     }
 
     // --- VERIFICARE STARE JOC ---
-    void checkGameStatus() {
-        bool allCaptured = std::all_of(regions.begin(), regions.end(), [](const Zone& z) {
-            return z.getCity().isOccupied();
-        });
-
-        bool noCitiesLeft = std::none_of(regions.begin(), regions.end(), [](const Zone& z) {
-            return z.getCity().isOccupied();
-        });
-
-        if (allCaptured) currentState = GameState::VICTORIE;
-        else if (noCitiesLeft || clock.getDay() >= MAX_DAYS) currentState = GameState::DEFEAT;
-    }
+    // void checkGameStatus() {
+    //     bool allCaptured = std::all_of(regions.begin(), regions.end(), [](const Zone& z) {
+    //         return z.getCity().isOccupied();
+    //     });
+    //
+    //     bool noCitiesLeft = std::none_of(regions.begin(), regions.end(), [](const Zone& z) {
+    //         return z.getCity().isOccupied();
+    //     });
+    //
+    //     if (allCaptured) currentState = GameState::VICTORIE;
+    //     else if (noCitiesLeft || clock.getDay() >= MAX_DAYS) currentState = GameState::DEFEAT;
+    // }
 
     void processNextDay() {
         if (gameOver) return;
@@ -1053,35 +1055,35 @@ private:
         }
     }
     // --- LOGICA DE RECRUTARE (Meniul R) ---
-    void handleRecruitment() {
-        if (!showRecruitment) return; // Dacă meniul nu e vizibil, nu recrutăm
+    // void handleRecruitment() {
+    //     if (!showRecruitment) return; // Dacă meniul nu e vizibil, nu recrutăm
+    //
+    //     int typeToRecruit = -1;
+    //     if (IsKeyPressed(KEY_ONE)) typeToRecruit = (int)UnitType::INFANTERIE;
+    //     if (IsKeyPressed(KEY_TWO)) typeToRecruit = (int)UnitType::ARCASI;
+    //     if (IsKeyPressed(KEY_THREE)) typeToRecruit = (int)UnitType::CAVALERIE;
+    //     if (IsKeyPressed(KEY_FOUR)) typeToRecruit = (int)UnitType::GARDA;
+    //
+    //     if (typeToRecruit != -1) {
+    //         UnitType t = static_cast<UnitType>(typeToRecruit);
+    //         auto stats = GameData[t];
+    //         try {
+    //             int limit = player.getUnitLimit(regions);
+    //             player.recruit(UnitFactory::CreateUnit(t, "Soldat"), stats.cost, limit);
+    //             logger.add("Recrutat: Soldat (" + std::to_string(stats.cost) + " aur)");
+    //         } catch (const EmpireException& e) {
+    //             logger.logError(e);
+    //         }
+    //     }
+    // }
 
-        int typeToRecruit = -1;
-        if (IsKeyPressed(KEY_ONE)) typeToRecruit = (int)UnitType::INFANTERIE;
-        if (IsKeyPressed(KEY_TWO)) typeToRecruit = (int)UnitType::ARCASI;
-        if (IsKeyPressed(KEY_THREE)) typeToRecruit = (int)UnitType::CAVALERIE;
-        if (IsKeyPressed(KEY_FOUR)) typeToRecruit = (int)UnitType::GARDA;
-
-        if (typeToRecruit != -1) {
-            UnitType t = static_cast<UnitType>(typeToRecruit);
-            auto stats = GameData[t];
-            try {
-                int limit = player.getUnitLimit(regions);
-                player.recruit(UnitFactory::CreateUnit(t, "Soldat"), stats.cost, limit);
-                logger.add("Recrutat: Soldat (" + std::to_string(stats.cost) + " aur)");
-            } catch (const EmpireException& e) {
-                logger.logError(e);
-            }
-        }
-    }
-
-    void tryRecruit(UnitType type, const std::string& name, int cost) {
-        try {
-            int limit = player.getUnitLimit(regions);
-            player.recruit(UnitFactory::CreateUnit(type, name), cost, limit);
-            logger.add("Recrutare reusita: " + name);
-        } catch (const EmpireException& e) { logger.logError(e); }
-    }
+    // void tryRecruit(UnitType type, const std::string& name, int cost) {
+    //     try {
+    //         int limit = player.getUnitLimit(regions);
+    //         player.recruit(UnitFactory::CreateUnit(type, name), cost, limit);
+    //         logger.add("Recrutare reusita: " + name);
+    //     } catch (const EmpireException& e) { logger.logError(e); }
+    // }
 
     // --- LOGICA DE LUPTĂ ---
     void handleCombat() {
