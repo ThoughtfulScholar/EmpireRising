@@ -70,24 +70,9 @@ endif()
 add_executable(${MAIN_EXECUTABLE_NAME}
     main.cpp
 )
-
 target_sources(${MAIN_EXECUTABLE_NAME}
     PRIVATE
-        src/Unit.cpp
-        src/UnitTypes.cpp
-        src/UnitFactory.cpp
-        src/ArmyManager.cpp
-        src/WorldMap.cpp
-        src/City.cpp
-        src/Zone.cpp
-        src/EnemyArmy.cpp
-        src/Player.cpp
-        src/WorldClock.cpp
-        src/LoginUI.cpp
-        src/Simulation_Logic.cpp
-        src/Simulation_Input.cpp
-        src/Simulation_Render.cpp
-        src/Simulation.cpp
+        src/Example.cpp
 )
 
 # NOTE: Add all defined targets (e.g. executables, libraries, etc. )
