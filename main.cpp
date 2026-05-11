@@ -457,6 +457,11 @@ public:
 // ==========================================================
 // CLASA CITY - REPARATA PENTRU LOGGER SI ECONOMIE
 // ==========================================================
+#include <vector>
+#include <memory>
+#include <string>
+#include <map>
+
 class City {
 private:
     std::string name;
@@ -465,15 +470,15 @@ private:
     int cityLevel;
     bool occupied;
 
-    // Garnizoana - Polimorfism prin unique_ptr
+    // TEMA 2: Gestiune automată a memoriei pentru unitățile de garnizoană
     std::vector<std::unique_ptr<Unit>> garrison;
 
 public:
-    // Constructor cu valori default pentru a evita erori in initWorld
+    // Constructor principal
     City(std::string n, int x, int y, int pop = 150)
         : name(std::move(n)), posX(x), posY(y), population(pop), cityLevel(1), occupied(false) {}
 
-    // Rule of Three: Constructor de copiere (Clonare polimorfica)
+    // RULE OF THREE: Necesar pentru a copia corect unique_ptr prin clonare (Tema 2)
     City(const City& other)
         : name(other.name), posX(other.posX), posY(other.posY),
           population(other.population), cityLevel(other.cityLevel), occupied(other.occupied) {
@@ -482,14 +487,10 @@ public:
         }
     }
 
-    // Rule of Three: Operator de atribuire
     City& operator=(const City& other) {
         if (this != &other) {
-            name = other.name;
-            posX = other.posX;
-            posY = other.posY;
-            population = other.population;
-            cityLevel = other.cityLevel;
+            name = other.name; posX = other.posX; posY = other.posY;
+            population = other.population; cityLevel = other.cityLevel;
             occupied = other.occupied;
             garrison.clear();
             for (const auto& u : other.garrison) {
@@ -499,30 +500,52 @@ public:
         return *this;
     }
 
-    // --- MECANICI DE UPGRADE SI EVOLUTIE ---
+    // --- MECANICI DE EVOLUȚIE (TEMA 1) ---
 
     void upgrade() {
         cityLevel++;
-        population += 100; // Bonus instant la upgrade
-    }
-
-    [[nodiscard]] int getUpgradeCost() const {
-        return cityLevel * 500; // Costul creste cu nivelul
+        population += 100; // Bonus de expansiune
     }
 
     void growPopulation() {
         if (occupied) {
-            // Populatia creste mai repede in orase de nivel mare
-            population += (10 * cityLevel);
+            // Populația crește în funcție de stabilitate și nivel
+            population += (20 * cityLevel);
         }
     }
 
-    // --- MECANICI ECONOMICE ---
+    // --- LOGICA MATEMATICĂ DE REBELIUNE (1 unitate la 100 oameni) ---
+
+    template<typename T>
+    void checkRebellion(T& logger) {
+        if (!occupied) return;
+
+        // Formula cerută: 1 unitate la 100 de locuitori
+        int unitsNeeded = population / 100;
+        if (unitsNeeded < 1) unitsNeeded = 1; // Minim o unitate pentru control
+
+        int currentGarrisonCount = (int)garrison.size();
+
+        // Dacă garnizoana este insuficientă, calculăm riscul
+        if (currentGarrisonCount < unitsNeeded) {
+            // Exemplu: Pop 800 -> needed 8. Ai 1 unitate. Șansă: (8-1)/8 = 87.5%
+            float failChance = (float)(unitsNeeded - currentGarrisonCount) / unitsNeeded;
+            float roll = (float)GetRandomValue(0, 100) / 100.0f;
+
+            if (roll < failChance) {
+                occupied = false;
+                garrison.clear(); // Garnizoana este eliminată de revoltați (Tema 2 - memorie eliberată)
+                logger.add("RASCOALA în " + name + "! Populatia a preluat controlul (Risc: " + std::to_string((int)(failChance*100)) + "%)");
+            }
+        }
+    }
+
+    // --- ECONOMIE (TAXE ȘI SALARII) ---
 
     [[nodiscard]] int collectTaxes() const {
         if (!occupied) return 0;
-        // Formula: Populatie baze, multiplicata de nivelul orasului
-        return (population / 5) * cityLevel;
+        // Taxe mult mai mari conform cerinței (Populația / 2 * Nivel)
+        return (population / 2) * cityLevel;
     }
 
     [[nodiscard]] int getGarrisonUpkeep() const {
@@ -533,33 +556,18 @@ public:
         return total;
     }
 
-    // --- LOGICA DE RASCOALA (REBELLION) ---
-
-    template<typename T>
-    void checkRebellion(T& logger) {
-        // Conditii: Ocupat, populatie mare (>500) si GARNIZOANA GOALA
-        if (occupied && population > 500 && garrison.empty()) {
-            // Sansa de 25% sa se intample daca conditiile sunt indeplinite
-            if (GetRandomValue(0, 100) < 25) {
-                occupied = false;
-                population -= 50; // Pierderi civile in revolta
-                logger.add("RASCOALA! " + name + " s-a eliberat pentru ca nu aveai garda!");
-            }
-        }
-    }
-
-    // --- GESTIONARE GARNIZOANA (Tastatura G / T) ---
+    // --- GESTIONARE TRUPE ---
 
     void addUnitToGarrison(std::unique_ptr<Unit> u) {
         if (u) {
             garrison.push_back(std::move(u));
-            occupied = true; // Un oras cu trupele tale e automat ocupat
+            occupied = true; // Dacă pui trupe, orașul devine ocupat/al tău
         }
     }
 
     std::unique_ptr<Unit> extractUnit() {
         if (garrison.empty()) return nullptr;
-        std::unique_ptr<Unit> u = std::move(garrison.back());
+        auto u = std::move(garrison.back());
         garrison.pop_back();
         return u;
     }
@@ -568,27 +576,24 @@ public:
         garrison.clear();
     }
 
-    // --- GETTERI SI SETTERI ---
+    // --- GETTERI ---
 
     [[nodiscard]] const std::string& getName() const { return name; }
     [[nodiscard]] std::pair<int, int> getPos() const { return {posX, posY}; }
     [[nodiscard]] int getPopulation() const { return population; }
     [[nodiscard]] int getCityLevel() const { return cityLevel; }
+    [[nodiscard]] int getUpgradeCost() const { return cityLevel * 500; }
     [[nodiscard]] bool isOccupied() const { return occupied; }
     void setOccupied(bool state) { occupied = state; }
 
-    // Pentru afisarea in drawUI (ex: "3 x Arcas")
+    std::vector<std::unique_ptr<Unit>>& getGarrison() { return garrison; }
+
     [[nodiscard]] std::map<std::string, int> getGarrisonCounts() const {
         std::map<std::string, int> counts;
         for (const auto& u : garrison) {
             if (u) counts[u->getName()]++;
         }
         return counts;
-    }
-
-    // Pentru logica de lupta si spawn inamic
-    std::vector<std::unique_ptr<Unit>>& getGarrison() {
-        return garrison;
     }
 };
 // ==========================================================
@@ -745,6 +750,23 @@ public:
     [[nodiscard]] std::pair<int, int> getPos() const { return {posX, posY}; }
 };
 
+class Enemy {
+private:
+    int x, y;
+    int strength;
+public:
+    Enemy(int x, int y, int strength) : x(x), y(y), strength(strength) {}
+    int getX() const { return x; }
+    int getY() const { return y; }
+    int getStrength() const { return strength; }
+};
+
+class GarrisonUnit : public Unit {
+public:
+    GarrisonUnit() : Unit("Garnizoana", 200, 30, 10) {} // Nume, HP, Atac, Upkeep mic
+    std::unique_ptr<Unit> clone() const override { return std::make_unique<GarrisonUnit>(*this); }
+};
+
 // ==========================================================
 // 13. WORLD CLOCK (Sistemul de Timp)
 // ==========================================================
@@ -781,6 +803,7 @@ private:
 
     int activeRegionIdx = 0;
     bool showRecruitment = false;
+    bool gameOver = false;
 
     static constexpr int MAX_DAYS = 50;
     static constexpr int SIDEBAR_WIDTH = 400;
@@ -856,60 +879,94 @@ private:
     }
 
     void processNextDay() {
+        // 0. Dacă jocul s-a terminat, nu mai procesăm nimic
+        if (gameOver) return;
+
+        // 1. Avansăm calendarul și logăm începutul zilei
         clock.nextDay();
         logger.add("--- ZIUA " + std::to_string(clock.getDay()) + " ---");
 
-        // 1. ECONOMIE
-        int dailyIncome = calculateTotalIncome();
-        int dailyExpenses = calculateTotalUpkeep();
-        player.earnGold(dailyIncome);
-        player.removeGold(dailyExpenses);
+        int totalIncome = 0;
+        int totalUpkeep = 0;
+        int occupiedCitiesCount = 0;
 
-        // 2. LOGICĂ ORAȘE (CREȘTERE ȘI RĂSCOALĂ)
+        // 2. Calculăm Upkeep-ul Armatei Mobile (Jucătorul)
+        // Presupunem că player.getArmy() returnează obiectul Army
+        totalUpkeep += player.getArmy().calculateTotalUpkeep();
+
+        // 3. Procesăm fiecare regiune/cetate de pe hartă
         for (auto& reg : regions) {
             City& city = reg.getCity();
-            city.growPopulation();
-            city.checkRebellion(logger); // <--- REINTRODUSĂ AICI
-        }
 
-        // 3. SPAWNATORUL DE ARMATE INAMICE (Evenimente Dinamice)
-        // Se declanșează la fiecare 4 zile
-        if (clock.getDay() % 4 == 0) {
-            int eventSeed = GetRandomValue(0, 100);
+            if (city.isOccupied()) {
+                occupiedCitiesCount++;
 
-            if (eventSeed < 40) { // 40% șansă de atac inamic
-                // Căutăm o cetate la întâmplare care este ocupată de jucător
-                int targetIdx = GetRandomValue(0, regions.size() - 1);
-                City& targetCity = regions[targetIdx].getCity();
+                // A. Evoluție (Tema 1): Creștem populația orașului
+                city.growPopulation();
 
-                if (targetCity.isOccupied()) {
-                    logger.add("ATAC! O armata inamica asediaza " + targetCity.getName());
+                // B. Economie: Adunăm taxele și upkeep-ul garnizoanei specifice
+                totalIncome += city.collectTaxes();
+                totalUpkeep += city.getGarrisonUpkeep();
 
-                    // Dacă garnizoana e slabă (sub 2 unități), inamicul are șanse mari să o ia înapoi
-                    if (targetCity.getGarrison().size() < 2) {
-                        targetCity.clearGarrison(); // Metoda adaugată anterior
-                        targetCity.setOccupied(false);
-                        logger.add("Inamicul a recucerit " + targetCity.getName() + "!");
-                    } else {
-                        // Dacă ai trupe, se dă o luptă automată (pierzi o unitate, dar păstrezi orașul)
-                        targetCity.extractUnit();
-                        logger.add("Garnizoana din " + targetCity.getName() + " a respins atacul, dar a suferit pierderi.");
+                // C. LOGICA MATEMATICĂ DE REBELIUNE (Cerința ta: 1 unitate la 100 oameni)
+                int pop = city.getPopulation();
+                int currentGarrison = (int)city.getGarrison().size();
+                int unitsNeeded = pop / 100;
+                if (unitsNeeded < 1) unitsNeeded = 1; // Minim o unitate necesară
+
+                if (currentGarrison < unitsNeeded) {
+                    // Formula ta: (8 - 1) / 8 = 7/8 șansă de eșec
+                    float failChance = (float)(unitsNeeded - currentGarrison) / unitsNeeded;
+                    float roll = (float)GetRandomValue(0, 100) / 100.0f;
+
+                    if (roll < failChance) {
+                        city.setOccupied(false);
+                        city.clearGarrison(); // Memoria unique_ptr este eliberată automat (Tema 2)
+                        logger.add("!!! REBELIUNE în " + city.getName() + " (Risc: " + std::to_string((int)(failChance*100)) + "%)");
+                        occupiedCitiesCount--;
                     }
                 }
             }
-            else if (eventSeed < 70) { // 30% șansă de bandiți pe drumuri
-                int stolen = GetRandomValue(100, 300);
-                player.removeGold(stolen);
-                logger.add("BANDITI! Ti-au fost furati " + std::to_string(stolen) + " galbeni de pe rutele comerciale.");
+        }
+
+        // 4. Aplicăm tranzacția financiară (PROFIT NET)
+        int netProfit = totalIncome - totalUpkeep;
+        player.earnGold(netProfit);
+
+        logger.add(TextFormat("Finanțe: Taxe +%i | Salarii -%i | Net: %+i", totalIncome, totalUpkeep, netProfit));
+
+        // 5. SPAWNATOR DE ARMATE INAMICE (Evenimente externe la fiecare 5 zile)
+        if (clock.getDay() % 5 == 0) {
+            // Șansă de atac asupra unei cetăți controlate
+            if (occupiedCitiesCount > 0) {
+                int targetIdx = GetRandomValue(0, regions.size() - 1);
+                if (regions[targetIdx].getCity().isOccupied()) {
+                    logger.add("ATAC INAMIC: O armată străină a asediat " + regions[targetIdx].getCity().getName() + "!");
+                    // Dacă nu există garnizoană deloc, orașul cade instant
+                    if (regions[targetIdx].getCity().getGarrison().empty()) {
+                        regions[targetIdx].getCity().setOccupied(false);
+                        logger.add("Cetatea a căzut fără luptă!");
+                    } else {
+                        // Luptă: Moare o unitate de garnizoană
+                        regions[targetIdx].getCity().extractUnit();
+                        logger.add("Garnizoana a respins atacul, dar a pierdut oameni.");
+                    }
+                }
             }
         }
 
-        // 4. VERIFICARE FALIMENT
-        if (player.getGold() < 0) {
-            logger.add("FALIMENT! Soldatii tai incep sa dezerteze!");
-            if (!player.getArmy().getUnits().empty()) {
-                player.getArmy().getUnits().pop_back(); // Moare/Pleacă o unitate
-            }
+        // 6. VERIFICARE CONDIȚII DE PIERDERE (GAME OVER)
+
+        // A. Pierdere prin lipsă de teritoriu
+        if (occupiedCitiesCount <= 0 && clock.getDay() > 1) {
+            gameOver = true;
+            logger.add("DEZASTRU: Nu mai controlezi nicio cetate! Poporul te-a uitat.");
+        }
+
+        // B. Pierdere prin faliment (Dacă rămâi fără aur și nu poți plăti trupele)
+        if (player.getGold() < -500) {
+            gameOver = true;
+            logger.add("FALIMENT: Tezaurul este ruinat. Armata a dezertat în masă.");
         }
     }
     // --- LOGICA DE RECRUTARE (Meniul R) ---
@@ -1098,138 +1155,133 @@ private:
     }
     // --- UI RENDERING ---
     void drawUI() {
-        // 1. SETĂRI COORDONATE ȘI DIMENSIUNI
-        const int offX = 50;
-        const int offY = 50;
-        const int sbX = 1200; // Sidebar-ul începe după lățimea hărții (1200px)
-        const int screenW = 1600;
-        const int screenH = 1000;
+        const int sbX = 1200; // Sidebar-ul începe la 1200px
+        const int mapOffX = 50, mapOffY = 50;
 
-        // 2. DESENARE HARTĂ (RELIEF ȘI GRILĂ)
-        worldMap.draw(offX, offY);
+        // 1. DESENARE HARTĂ (TEMA 1: Relief Diversificat)
+        worldMap.draw(mapOffX, mapOffY);
 
-        // 3. DESENARE CETĂȚI ȘI SELECȚIE
+        // 2. DESENARE CETĂȚI ȘI SELECȚIE
         for (size_t i = 0; i < regions.size(); ++i) {
             auto& city = regions[i].getCity();
             auto [cx, cy] = city.getPos();
-            int sx = offX + cx * 40 + 20;
-            int sy = offY + cy * 40 + 20;
+            int sx = mapOffX + cx * 40 + 20;
+            int sy = mapOffY + cy * 40 + 20;
 
-            // Cerc de selecție pentru tasta TAB
+            // Evidențiere selecție TAB
             if (i == (size_t)activeRegionIdx) {
-                DrawCircleLines(sx, sy, 24, GOLD);
-                DrawCircleLines(sx, sy, 25, GOLD); // Linie dublă pentru vizibilitate
+                DrawCircleLines(sx, sy, 26, GOLD);
+                DrawCircleLines(sx, sy, 27, YELLOW);
             }
 
-            // Simbolul Cetății (Verde = Ta, Maro = Inamică/Neutră)
-            Color cityColor = city.isOccupied() ? GREEN : MAROON;
-            DrawCircle(sx, sy, 15, cityColor);
+            // Simbol Cetate: Verde (Ta), Maro (Inamică/Răsculată)
+            Color cCol = city.isOccupied() ? GREEN : MAROON;
+            DrawCircle(sx, sy, 15, cCol);
             DrawCircleLines(sx, sy, 16, RAYWHITE);
 
-            // NUMELE CETĂȚII (Direct sub ea pe hartă)
-            DrawText(city.getName().c_str(), sx - (MeasureText(city.getName().c_str(), 12) / 2), sy + 22, 12, RAYWHITE);
-
-            // Nivelul cetății afișat discret deasupra
-            DrawText(TextFormat("Lvl %i", city.getCityLevel()), sx - 15, sy - 32, 10, SKYBLUE);
+            // Numele cetății sub ea (MeasureText pentru centrare)
+            const char* nameStr = city.getName().c_str();
+            DrawText(nameStr, sx - MeasureText(nameStr, 12) / 2, sy + 22, 12, RAYWHITE);
+            DrawText(TextFormat("Lvl %i", city.getCityLevel()), sx - 15, sy - 35, 10, SKYBLUE);
         }
 
-        // 4. DESENARE JUCĂTOR (Avatarul tău pe hartă)
+        // 3. AVATAR JUCĂTOR
         auto [px, py] = player.getPos();
-        int psx = offX + px * 40 + 20;
-        int psy = offY + py * 40 + 20;
-        DrawCircle(psx, psy, 12, YELLOW);
-        DrawCircleLines(psx, psy, 13, WHITE);
+        DrawCircle(mapOffX + px * 40 + 20, mapOffY + py * 40 + 20, 12, GOLD);
 
-        // 5. SIDEBAR DREAPTA (Economie, Detalii, Garnizoană)
-        DrawRectangle(sbX, 0, 400, screenH, raylib::Color(30, 30, 35, 255));
-        DrawLine(sbX, 0, sbX, screenH, GOLD);
+        // 4. SIDEBAR - STATUS IMPERIU
+        DrawRectangle(sbX, 0, 400, 1000, raylib::Color(25, 25, 30, 255));
+        DrawLine(sbX, 0, sbX, 1000, GOLD);
 
-        // --- Economie ---
-        DrawText("TEZAUR REGAL", sbX + 20, 30, 24, GOLD);
-        DrawText(TextFormat("Aur: %i", player.getGold()), sbX + 20, 70, 22, RAYWHITE);
-        int netGold = calculateTotalIncome() - calculateTotalUpkeep();
-        DrawText(TextFormat("Profit/Zi: %+i", netGold), sbX + 200, 70, 20, (netGold >= 0 ? GREEN : RED));
+        // --- Economie Netă ---
+        DrawText("TEZAURUL COROANEI", sbX + 20, 30, 22, GOLD);
+        DrawText(TextFormat("Aur actual: %i", player.getGold()), sbX + 20, 65, 20, WHITE);
 
-        // --- Detalii Cetate Selectată ---
-        auto& selCity = regions[activeRegionIdx].getCity();
-        DrawText("REGIUNE SELECTATA:", sbX + 20, 130, 18, GRAY);
-        DrawText(selCity.getName().c_str(), sbX + 20, 155, 28, GOLD);
+        int income = calculateTotalIncome();
+        int upkeep = calculateTotalUpkeep(); // Include mobile + garnizoane
+        int netProfit = income - upkeep;
 
-        int nextY = 195;
-        if (selCity.isOccupied()) {
-            DrawText(TextFormat("Populatie: %i", selCity.getPopulation()), sbX + 20, nextY, 18, RAYWHITE);
-            DrawText(TextFormat("Venit Taxe: +%i", selCity.collectTaxes()), sbX + 20, nextY + 25, 18, GREEN);
-            DrawText(TextFormat("[U] Upgrade la Lvl %i: %i aur", selCity.getCityLevel() + 1, selCity.getUpgradeCost()), sbX + 20, nextY + 50, 16, ORANGE);
-            nextY += 90;
+        DrawText(TextFormat("Profit Net: %+i", netProfit), sbX + 20, 90, 20, (netProfit >= 0 ? GREEN : RED));
+        DrawLine(sbX + 20, 125, sbX + 380, 125, DARKGRAY);
 
-            // --- Garnizoana Cetății ---
-            DrawText("GARNIZOANA:", sbX + 20, nextY, 20, SKYBLUE);
-            auto gCounts = selCity.getGarrisonCounts();
-            nextY += 30;
-            if (gCounts.empty()) {
-                DrawText("(Fara unitati)", sbX + 30, nextY, 16, DARKGRAY);
-                nextY += 25;
-            } else {
-                for (auto const& [name, count] : gCounts) {
-                    DrawText(TextFormat("%i x %s", count, name.c_str()), sbX + 30, nextY, 17, RAYWHITE);
-                    nextY += 22;
-                }
-            }
+        // --- Detalii Cetate & Risc Rebeliune ---
+        auto& sel = regions[activeRegionIdx].getCity();
+        DrawText(sel.getName().c_str(), sbX + 20, 140, 28, GOLD);
+
+        if (sel.isOccupied()) {
+            int pop = sel.getPopulation();
+            int gCount = (int)sel.getGarrison().size();
+            int needed = pop / 100; if (needed < 1) needed = 1;
+
+            // Calcul risc rebeliune (Formula: (Needed - Current) / Needed)
+            float risk = 0;
+            if (gCount < needed) risk = (float)(needed - gCount) / needed;
+
+            DrawText(TextFormat("Populatie: %i", pop), sbX + 20, 185, 18, LIGHTGRAY);
+            DrawText(TextFormat("Garnizoana: %i / %i unitati", gCount, needed), sbX + 20, 210, 18, (risk > 0 ? ORANGE : GREEN));
+
+            // Bara de Risc
+            DrawRectangle(sbX + 20, 235, 300, 10, DARKGRAY);
+            DrawRectangle(sbX + 20, 235, (int)(300 * risk), 10, RED);
+            DrawText(TextFormat("RISC RASCOALA: %i%%", (int)(risk * 100)), sbX + 20, 250, 16, (risk > 0.5 ? RED : ORANGE));
+
+            DrawText(TextFormat("[U] Upgrade (%i Aur)", sel.getUpgradeCost()), sbX + 20, 285, 18, SKYBLUE);
         } else {
-            DrawText("STARE: NECUCERITA", sbX + 20, nextY, 20, RED);
-            nextY += 50;
+            DrawText("STARE: NEOCUPATA", sbX + 20, 185, 20, MAROON);
         }
 
-        // --- Armata Ta (Trupele Mobile) ---
-        DrawLine(sbX + 20, nextY, sbX + 380, nextY, GRAY);
-        nextY += 20;
-        DrawText("ARMATA TA:", sbX + 20, nextY, 22, GOLD);
-        nextY += 35;
-        auto armyCounts = player.getArmy().getUnitCounts();
-        for (auto const& [name, count] : armyCounts) {
-            DrawText(TextFormat("%i x %s", count, name.c_str()), sbX + 30, nextY, 18, RAYWHITE);
-            nextY += 25;
+        // --- Armata Mobila (Trupele tale) ---
+        DrawLine(sbX + 20, 320, sbX + 380, 320, DARKGRAY);
+        DrawText("ARMATA MOBILA", sbX + 20, 335, 20, GOLD);
+        int unitY = 370;
+        auto counts = player.getArmy().getUnitCounts();
+        for (auto const& [name, count] : counts) {
+            DrawText(TextFormat("%i x %s", count, name.c_str()), sbX + 35, unitY, 17, WHITE);
+            unitY += 22;
         }
 
-        // --- Journal ---
-        DrawText("WAR JOURNAL", sbX + 20, 750, 20, GOLD);
-        int logY = 785;
+        // --- Jurnal de Razboi ---
+        DrawText("WAR JOURNAL", sbX + 20, 720, 20, GOLD);
+        int logY = 755;
         for (const auto& msg : logger.getMessages()) {
             DrawText(msg.c_str(), sbX + 20, logY, 15, LIGHTGRAY);
             logY += 20;
         }
 
-        // 6. OVERLAY RECRUTARE (Tasta R)
+        // 5. OVERLAY RECRUTARE (Tasta R)
         if (showRecruitment) {
-            DrawRectangle(0, 0, screenW, screenH, raylib::Color(0, 0, 0, 230));
-            int mX = 250, mY = 200, mW = 1100, mH = 550;
-            DrawRectangle(mX, mY, mW, mH, raylib::Color(20, 20, 25, 255));
-            DrawRectangleLines(mX, mY, mW, mH, GOLD);
-            DrawText("BIROU DE RECRUTARE", mX + 380, mY + 30, 32, GOLD);
+            DrawRectangle(0, 0, 1600, 1000, {0, 0, 0, 200});
+            DrawRectangle(300, 200, 1000, 600, {30, 30, 35, 255});
+            DrawRectangleLines(300, 200, 1000, 600, GOLD);
+            DrawText("RECRUTARE MERCENARI / GARNIZOANA", 550, 230, 30, GOLD);
 
-            auto drawRecRow = [&](int idx, UnitType t, int y) {
+            auto drawRow = [&](int idx, UnitType t, int y) {
                 auto s = GameData[t];
-                DrawText(TextFormat("[%i] %s", idx, s.name.c_str()), mX + 50, y, 24, GOLD);
-                DrawText(TextFormat("VIATA: %i", s.hp), mX + 280, y, 20, RAYWHITE);
-                DrawText(TextFormat("ATAC: %i", s.atk), mX + 450, y, 20, RED);
-                DrawText(TextFormat("UPKEEP: %i/zi", s.upkeep), mX + 620, y, 20, ORANGE);
-                DrawText(TextFormat("COST: %i", s.cost), mX + 850, y, 22, GREEN);
-                DrawLine(mX + 40, y + 45, mX + 1060, y + 45, DARKGRAY);
+                DrawText(TextFormat("[%i] %s", idx, s.name.c_str()), 350, y, 22, WHITE);
+                DrawText(TextFormat("ATK: %i | HP: %i", s.atk, s.hp), 580, y, 20, RED);
+                DrawText(TextFormat("UPKEEP: %i/zi", s.upkeep), 820, y, 20, ORANGE);
+                DrawText(TextFormat("COST: %i", s.cost), 1100, y, 20, GREEN);
             };
 
-            drawRecRow(1, UnitType::INFANTERIE, mY + 120);
-            drawRecRow(2, UnitType::ARCASI,     mY + 200);
-            drawRecRow(3, UnitType::CAVALERIE,  mY + 280);
-            drawRecRow(4, UnitType::GARDA,      mY + 360);
-
-            DrawText("APASA CIFRA [1-4] PENTRU RECRUTARE | [R] INCHIDE", mX + 320, mY + 480, 20, RAYWHITE);
+            drawRow(1, UnitType::INFANTERIE, 320);
+            drawRow(2, UnitType::ARCASI, 400);
+            drawRow(3, UnitType::CAVALERIE, 480);
+            drawRow(4, UnitType::GARDA, 560); // Aceasta poate servi ca "Garrison unit"
         }
 
-        // 7. CONTROALE (FOOTER)
-        DrawRectangle(0, 930, 1200, 70, raylib::Color(0, 0, 0, 180));
-        DrawText("[W,A,S,D] Miscare  [TAB] Schimba Cetatea  [U] Upgrade  [R] Recrutare", 30, 945, 18, RAYWHITE);
-        DrawText("[G] Depoziteaza în Garnizoana  [T] Retrage din Garnizoana  [N] Zi Noua", 30, 970, 18, GRAY);
-        DrawText(TextFormat("ZIUA: %i", clock.getDay()), 1080, 945, 26, WHITE);
+        // 6. ECRAN GAME OVER (Pierdere totală de cetăți)
+        if (gameOver) {
+            DrawRectangle(0, 0, 1600, 1000, {150, 0, 0, 180});
+            DrawText("IMPERIUL A CAZUT", 550, 450, 60, RAYWHITE);
+            DrawText("Nu mai controlezi nicio cetate sau tezaurul a secat.", 540, 520, 20, LIGHTGRAY);
+            DrawText("APASA ESC PENTRU A PARASI JOCUL", 620, 580, 18, GOLD);
+        }
+
+        // 7. FOOTER
+        DrawRectangle(0, 930, 1200, 70, {0, 0, 0, 150});
+        DrawText("[W,A,S,D] Miscare | [R] Recrutare | [TAB] Navigare | [U] Upgrade | [N] Zi Noua", 40, 945, 18, WHITE);
+        DrawText("[G] Depoziteaza in Garnizoana | [T] Retrage Unitati in Armata Mobila", 40, 970, 16, GRAY);
+        DrawText(TextFormat("ZIUA: %i / 50", clock.getDay()), 1050, 955, 24, GOLD);
     }
     // ==========================================================
 // 15. LOGIN UI (Sistem de Autentificare Simplu)
