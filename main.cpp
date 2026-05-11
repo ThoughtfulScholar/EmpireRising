@@ -343,14 +343,14 @@ public:
     void addUnit(std::unique_ptr<Unit> u) {
         if (u) units.push_back(std::move(u));
     }
-
+/*
     // Metodă pentru extragerea ultimei unități (pentru retragere din garnizoană)
     std::unique_ptr<Unit> popUnit() {
         if (units.empty()) return nullptr;
         std::unique_ptr<Unit> u = std::move(units.back());
         units.pop_back();
         return u;
-    }
+    }*/
 
     void removeDeadUnits() {
         std::erase_if(units, [](const auto& u) { return !u->isAlive(); });
@@ -938,13 +938,14 @@ private:
         }
         return upkeep;
     }
+    /*
     template <typename T>
         int findUnitIndexByType(const std::vector<std::unique_ptr<Unit>>& units) {
             for (int i = 0; i < (int)units.size(); ++i) {
                 if (dynamic_cast<T*>(units[i].get())) return i;
             }
             return -1;
-        }
+        }*/
 
     // [[nodiscard]] int getNetGold() const {
     //     return calculateTotalIncome() - calculateTotalUpkeep();
@@ -1595,7 +1596,10 @@ private:
     for (auto it = allMessages.rbegin(); it != allMessages.rend(); ++it) {
         if (mCount >= 6) break;
         std::string displayMsg = *it;
-        if (displayMsg.length() > 40) displayMsg = displayMsg.substr(0, 37) + "...";
+        if (displayMsg.length() > 40) {
+            displayMsg.resize(37);
+            displayMsg += "...";
+        }
 
         Color msgColor = (mCount == 0) ? RAYWHITE : (mCount < 3 ? LIGHTGRAY : GRAY);
         DrawText(displayMsg.c_str(), sbX + 25, logY, 13, msgColor);
@@ -1781,6 +1785,8 @@ void RunRequirementsDemo() {
     std::cout << "Taxa globala setata la: " << WorldClock::GetGlobalTaxRate() << "\n";
     std::cout << "Total unitati create in memorie: " << Unit::getTotalUnits() << "\n";
 
+    u1->display(std::cout);
+
     // 4. Exceptii
     try {
         throw PopulationLimitException("Test limita populatie.");
@@ -1788,6 +1794,7 @@ void RunRequirementsDemo() {
         std::cout << "Exceptie prinsa: " << e.what() << "\n";
     }
     std::cout << ">>> SFARSIT DEMO. Pornire interfata grafica...\n";
+
 }
 
 int main() {
