@@ -70,7 +70,7 @@ endif()
 add_executable(${MAIN_EXECUTABLE_NAME}
     main.cpp
 )
-target_sources(${MAIN_EXECUTABLE_NAME} PRIVATE ${GAME_SOURCES})
+
 target_sources(${MAIN_EXECUTABLE_NAME}
     PRIVATE
         src/Unit.cpp
