@@ -131,31 +131,30 @@ protected:
     int level;
     int xp;
 
-    // Membru static pentru contorizarea globala (Cerinta Tema 2)
     static int totalUnitsCreated;
 
-    // --- METODE VIRTUALE PROTEJATE (Cerință Tema 2) ---
+    // --- 1. IMPLEMENTĂRI VIRTUALE PROTEJATE (Cerință Tema 2) ---
+    // Logica specifică se află aici, poate fi suprascrisă de derivate
     [[nodiscard]] virtual int calculateTotalAttackImpl() const {
         return atk + (level * 5);
     }
 
+    // Aceasta este "Afișarea Virtuală" propriu-zisă
     virtual void print(std::ostream& os) const {
         os << name << " [Lvl " << level << " | HP: " << hp << "/" << maxHp
            << " | ATK: " << calculateTotalAttack() << "]";
     }
 
 public:
-    // Constructor de initializare (Fara parametrul def)
     Unit(std::string n, int h, int a, int u)
         : name(std::move(n)), hp(h), maxHp(h), atk(a),
           upkeepCost(u), level(1), xp(0) {
         totalUnitsCreated++;
     }
 
-    // Rule of Three: Destructor virtual obligatoriu
     virtual ~Unit() = default;
 
-    // Constructor de copiere (Prototype Pattern)
+    // Rule of Three: Copy Constructor
     Unit(const Unit& other)
         : name(other.name), hp(other.hp), maxHp(other.maxHp),
           atk(other.atk), upkeepCost(other.upkeepCost),
@@ -163,7 +162,7 @@ public:
         totalUnitsCreated++;
     }
 
-    // Operator de atribuire
+    // Rule of Three: Copy Assignment
     Unit& operator=(const Unit& other) {
         if (this != &other) {
             name = other.name;
@@ -177,65 +176,54 @@ public:
         return *this;
     }
 
-    // Metoda pur virtuala pentru clonare
     virtual std::unique_ptr<Unit> clone() const = 0;
 
-    // --- LOGICA DE LUPTA SI STATISTICI ---
+    // --- 2. INTERFAȚA NON-VIRTUALĂ (NVI) ---
+    // Metodele publice NU sunt virtuale. Ele apelează metodele virtuale protejate.
 
-    // Atacul creste cu nivelul
-    [[nodiscard]] virtual int calculateTotalAttack() const {
-        return atk + (level * 5);
+    [[nodiscard]] int calculateTotalAttack() const {
+        return calculateTotalAttackImpl();
     }
+
     void display(std::ostream& os) const {
         print(os);
     }
-    // Damage-ul scade direct din HP
+
+    // --- LOGICA DE LUPTA ---
     virtual void takeDamage(int rawDamage) {
         hp -= rawDamage;
         if (hp < 0) hp = 0;
     }
 
-    [[nodiscard]] bool isAlive() const {
-        return hp > 0;
-    }
-
-    // Necesar pentru compatibilitatea cu motorul de joc (Zone.cpp)
+    [[nodiscard]] bool isAlive() const { return hp > 0; }
     static void playAttackSound() {}
-
-    // --- EXPERIENTA SI NIVEL ---
 
     void gainXP(int amount) {
         xp += amount;
         if (xp >= 100) {
             level++;
             xp = 0;
-            maxHp += 30; // Bonus viata
-            hp = maxHp;  // Vindecare completa la level up
-            atk += 10;   // Bonus atac
+            maxHp += 30;
+            hp = maxHp;
+            atk += 10;
         }
     }
 
     // --- GETTERI ---
     [[nodiscard]] const std::string& getName() const { return name; }
     [[nodiscard]] int getHP() const { return hp; }
-    //[[nodiscard]] int getMaxHP() const { return maxHp; }
     [[nodiscard]] int getAtk() const { return atk; }
     [[nodiscard]] int getUpkeep() const { return upkeepCost; }
-    // [[nodiscard]] int getLevel() const { return level; }
 
-    // --- METODE STATICE ---
-    static int getTotalUnits() {
-        return totalUnitsCreated;
-    }
+    static int getTotalUnits() { return totalUnitsCreated; }
 
-    // --- OPERATORI ---
+    // --- 3. OPERATORI (Compunere de apeluri) ---
     friend std::ostream& operator<<(std::ostream& os, const Unit& u) {
-        os << u.name << " [Lvl " << u.level << " | HP: " << u.hp << "/" << u.maxHp
-           << " | ATK: " << u.atk << "]";
+        // Apelează interfața NVI, care la rândul ei apelează metoda virtuală protejată
+        u.display(os);
         return os;
     }
 };
-
 // Initializarea membrului static (Obligatoriu sub clasa)
 int Unit::totalUnitsCreated = 0;
 // ==========================================================
@@ -340,6 +328,14 @@ public:
     // Destructorul este automat (unique_ptr se ocupă de cleanup)
     ~ArmyManager() = default;
 
+    friend std::ostream& operator<<(std::ostream& os, const ArmyManager& am) {
+        os << "Armata (" << am.units.size() << " unitati):\n";
+        for (const auto& u : am.units) {
+            os << "  - " << *u << "\n"; // Apel compus: ArmyManager -> Unit
+        }
+        return os;
+    }
+
     void addUnit(std::unique_ptr<Unit> u) {
         if (u) units.push_back(std::move(u));
     }
@@ -418,6 +414,10 @@ private:
 public:
     WorldMap(int w, int h) : width(w), height(h) {
         grid.resize(height, std::vector<Tile>(width, Tile(TerrainType::PLAIN)));
+    }
+    friend std::ostream& operator<<(std::ostream& os, const WorldMap& wm) {
+        os << "Harta Lumii [" << wm.width << "x" << wm.height << "]";
+        return os;
     }
 
     // Algoritm care sapă un drum garantat (Cerința ta)
@@ -749,6 +749,14 @@ public:
                 enemyGarrison.addUnit(UnitFactory::CreateUnit(UnitType::INFANTERIE, "Garda Inamica"));
             }
         }
+    }
+    friend std::ostream& operator<<(std::ostream& os, const Zone& z) {
+        os << "Regiunea: " << z.zoneName << "\n"
+           << z.localCity << "\n"; // Apel compus: Zone -> City
+        if (!z.localCity.isOccupied()) {
+            os << "  [Garda Inamica]: " << z.enemyGarrison; // Zone -> ArmyManager
+        }
+        return os;
     }
 
     // Metoda de luptă (NVI - Non-Virtual Interface în esență prin apeluri polimorfice)
