@@ -1,6 +1,7 @@
 #ifndef CITY_HPP
 #define CITY_HPP
 
+#include <raylib.h>
 #include "Unit.hpp"
 #include "GameUtils.hpp"
 #include <vector>
