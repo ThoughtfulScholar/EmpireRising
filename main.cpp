@@ -1316,7 +1316,7 @@ private:
         if (dx != 0 || dy != 0) {
             try {
                 // Verificăm dacă un inamic ocupă tile-ul următor (ca să nu trecem prin el)
-                auto [px, py] = player.getPos();
+                //auto [px, py] = player.getPos();
                 bool blockedByEnemy = std::any_of(roamingEnemies.begin(), roamingEnemies.end(), [&](const EnemyArmy& e) {
                     return e.getX() == (px + dx) && e.getY() == (py + dy) && !e.isDefeated();
                 });
