@@ -1,1 +1,2 @@
-ext/** linguist-vendored
+.github/** linguist-documentation
+*.txt linguist-documentation
