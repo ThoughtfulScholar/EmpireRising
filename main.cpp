@@ -1815,7 +1815,7 @@ void RunRequirementsDemo() {
     std::cout << ">>> SFARSIT DEMO. Pornire interfata grafica...\n";
 
 }
-
+//
 int main() {
     RunRequirementsDemo();
     try {
