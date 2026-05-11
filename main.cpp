@@ -767,7 +767,7 @@ public:
         : commanderName(std::move(name)), gold(startingGold), posX(2), posY(2) {}
 
     // --- LOGICA LIMITĂ POPULAȚIE ---
-    [[nodiscard]] int getUnitLimit(const std::vector<Zone>& regions) const {
+    [[nodiscard]] static int getUnitLimit(const std::vector<Zone>& regions) {
         int limit = 4; // Limită de bază (corturile de campanie)
         for (const auto& r : regions) {
             if (r.getCity().isOccupied()) {
