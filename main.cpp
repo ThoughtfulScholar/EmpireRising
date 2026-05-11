@@ -629,26 +629,27 @@ public:
 
     // Setteri și Getteri
     void moveTowards(int targetX, int targetY, const WorldMap& wm) {
-        int nextX = posX;
-        int nextY = posY;
-
-        // Calculăm direcția dorită
+        // Calculăm direcția dorită (-1, 0, sau 1)
         int dx = (targetX > posX) ? 1 : (targetX < posX ? -1 : 0);
         int dy = (targetY > posY) ? 1 : (targetY < posY ? -1 : 0);
 
-        // Încercăm prima dată să ne mișcăm pe axa unde distanța e mai mare
+        // Încercăm să ne mișcăm pe axa unde distanța este mai mare (pentru un aspect mai natural)
         if (std::abs(targetX - posX) > std::abs(targetY - posY)) {
+            // Încercăm X primul
             if (dx != 0 && wm.isValidMove(posX + dx, posY)) {
                 posX += dx;
-            } else if (dy != 0 && wm.isValidMove(posX, posY + dy)) {
-                // Dacă axa X e blocată de teren, încercăm axa Y (ocolire)
+            }
+            // Dacă X e blocat de teren, încercăm Y
+            else if (dy != 0 && wm.isValidMove(posX, posY + dy)) {
                 posY += dy;
             }
         } else {
+            // Încercăm Y primul
             if (dy != 0 && wm.isValidMove(posX, posY + dy)) {
                 posY += dy;
-            } else if (dx != 0 && wm.isValidMove(posX + dx, posY)) {
-                // Dacă axa Y e blocată de teren, încercăm axa X (ocolire)
+            }
+            // Dacă Y e blocat de teren, încercăm X
+            else if (dx != 0 && wm.isValidMove(posX + dx, posY)) {
                 posX += dx;
             }
         }
