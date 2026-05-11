@@ -58,10 +58,11 @@ namespace GameEngine {
             std::uniform_int_distribution<int> dist(min, max);
             return dist(getEngine());
         }
-        static float GetFloat(float min, float max) {
-            std::uniform_real_distribution<float> dist(min, max);
-            return dist(getEngine());
-        }
+
+        // static float GetFloat(float min, float max) {
+        //     std::uniform_real_distribution<float> dist(min, max);
+        //     return dist(getEngine());
+        // }
     };
 
     class Logger {
@@ -85,7 +86,7 @@ namespace GameEngine {
         [[nodiscard]] const std::vector<std::string>& getMessages() const { return messages; }
 
         // Metodă statică (Cerință Tema 2)
-        static int getTotalLogs() { return totalLogEntries; }
+        //static int getTotalLogs() { return totalLogEntries; }
     };
 }
 
@@ -187,7 +188,7 @@ public:
     }
 
     // Necesar pentru compatibilitatea cu motorul de joc (Zone.cpp)
-    void playAttackSound() const {}
+    static void playAttackSound() {}
 
     // --- EXPERIENTA SI NIVEL ---
 
@@ -259,7 +260,7 @@ public:
     // Am scos 'int d' din lista de parametri
     Hero(const std::string& n, int h, int a, int u) : Unit(n, h, a, u) {}
     std::unique_ptr<Unit> clone() const override { return std::make_unique<Hero>(*this); }
-    static void inspire() {}
+    //static void inspire() {}
 };
 // ==========================================================
 // 7. UNIT FACTORY (Cerință Tema 2 - Creare Polimorfică)
@@ -350,13 +351,14 @@ public:
     }
 
     // Cerință Tema 2: dynamic_cast pentru a găsi și inspira eroii
+    /*
     void inspireHeroes() {
         for (auto& u : units) {
             if (auto* hero = dynamic_cast<Hero*>(u.get())) {
                 hero->inspire();
             }
         }
-    }
+    }*/
 
     [[nodiscard]] int calculateTotalUpkeep() const {
         int total = 0;
@@ -621,7 +623,7 @@ public:
     void updateStats() {
         int newHP = 0;
         int newAtk = 0;
-        for (auto& u : troops.getUnits()) {
+        for (const auto& u : troops.getUnits()) {
             newHP += u->getHP(); // Adunăm viața RĂMASĂ a fiecărei unități
             newAtk += u->calculateTotalAttack();
         }
@@ -868,7 +870,7 @@ private:
     bool gameOver = false;
 
     static constexpr int MAX_DAYS = 50;
-    static constexpr int SIDEBAR_WIDTH = 400;
+    //static constexpr int SIDEBAR_WIDTH = 400;
 
     // --- LOGICA ECONOMICĂ (Cerința Net Gold) ---
     [[nodiscard]] int calculateTotalIncome() const {
@@ -1086,6 +1088,7 @@ private:
     // }
 
     // --- LOGICA DE LUPTĂ ---
+/*
     void handleCombat() {
         auto [px, py] = player.getPos();
 
@@ -1100,7 +1103,7 @@ private:
 
                 // Calculăm puterea totală a jucătorului
                 int playerAtk = 0;
-                for(auto& u : player.getArmy().getUnits()) playerAtk += u->calculateTotalAttack();
+                for(const auto& u : player.getArmy().getUnits()) playerAtk += u->calculateTotalAttack();
 
                 // Schimb de damage
                 int enemyAtk = it->getAtk();
@@ -1130,7 +1133,7 @@ private:
                 logger.add(result);
             } catch (const EmpireException& e) { logger.logError(e); }
         }
-    }
+    }*/
 
     void handleInput() {
         // 1. DACĂ MENIUL DE RECRUTARE ESTE DESCHIS (Blochează restul acțiunilor)
@@ -1208,7 +1211,7 @@ private:
                     if (player.getArmy().isEmpty()) throw CombatException("Nu ai trupe pentru lupta!");
 
                     int pAtk = 0;
-                    for(auto& u : player.getArmy().getUnits()) pAtk += u->calculateTotalAttack();
+                    for(const auto& u : player.getArmy().getUnits()) pAtk += u->calculateTotalAttack();
 
                     targetedEnemy->takeDamage(pAtk);
 
@@ -1287,7 +1290,7 @@ private:
 
         // 2. DESENARE CETĂȚI ȘI SELECȚIE
         for (size_t i = 0; i < regions.size(); ++i) {
-            auto& city = regions[i].getCity();
+            const auto& city = regions[i].getCity();
             auto [cx, cy] = city.getPos();
             int sx = mapOffX + cx * 40 + 20;
             int sy = mapOffY + cy * 40 + 20;
@@ -1553,7 +1556,7 @@ void RunRequirementsDemo() {
     std::cout << "Original: " << *u1 << "\nClona: " << *u2 << "\n";
 
     // 2. dynamic_cast
-    if (auto* h = dynamic_cast<Hero*>(u1.get())) {
+    if (const auto* h = dynamic_cast<Hero*>(u1.get())) {
         std::cout << "dynamic_cast reusit: " << h->getName() << " este Erou.\n";
     }
 
