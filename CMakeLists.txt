@@ -70,6 +70,11 @@ endif()
 add_executable(${MAIN_EXECUTABLE_NAME}
     main.cpp
 )
+# Caută automat toate fișierele .cpp din folderul src
+file(GLOB_RECURSE GAME_SOURCES "src/*.cpp")
+
+# Le adaugă la executabil
+target_sources(${MAIN_EXECUTABLE_NAME} PRIVATE ${GAME_SOURCES})
 target_sources(${MAIN_EXECUTABLE_NAME}
     PRIVATE
         src/Unit.cpp
