@@ -284,20 +284,31 @@ static std::map<UnitType, UnitStats> GameData = {
 
 struct UnitFactory {
     static std::unique_ptr<Unit> CreateUnit(UnitType type, const std::string& customName = "") {
-        const auto& s = GameData.at(type); // Sursa de date
+        const auto& s = GameData.at(type);
         std::string fName = customName.empty() ? s.name : customName;
 
         switch (type) {
-            // Trimitem HP, ATK și UPKEEP direct din GameData
             case UnitType::INFANTERIE:
-                return std::make_unique<Hero>(fName, s.hp, s.atk, s.upkeep);
+                // Instanțiem clasa Infantry (asigură-te că primește stats în constructor sau are default)
+                return std::make_unique<Infantry>();
+
             case UnitType::ARCASI:
-                return std::make_unique<Hero>(fName, s.hp, s.atk, s.upkeep);
+                // Instanțiem clasa Archer
+                return std::make_unique<Archer>();
+
+            case UnitType::CAVALERIE:
+                // Instanțiem clasa Cavalry
+                return std::make_unique<Cavalry>();
+
             case UnitType::GARDA:
-                return std::make_unique<GarrisonGuard>(fName); // Dacă Garda e specială
+                return std::make_unique<GarrisonGuard>(fName);
+
             case UnitType::EROU:
+                // Doar aici instanțiem Hero
                 return std::make_unique<Hero>(fName, s.hp, s.atk, s.upkeep);
-            default: return nullptr;
+
+            default:
+                return nullptr;
         }
     }
 };
