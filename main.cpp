@@ -60,10 +60,6 @@ namespace GameEngine {
             return dist(getEngine());
         }
 
-        // static float GetFloat(float min, float max) {
-        //     std::uniform_real_distribution<float> dist(min, max);
-        //     return dist(getEngine());
-        // }
     };
 
     class Logger {
@@ -323,14 +319,7 @@ public:
     void addUnit(std::unique_ptr<Unit> u) {
         if (u) units.push_back(std::move(u));
     }
-/*
-    // Metodă pentru extragerea ultimei unități (pentru retragere din garnizoană)
-    std::unique_ptr<Unit> popUnit() {
-        if (units.empty()) return nullptr;
-        std::unique_ptr<Unit> u = std::move(units.back());
-        units.pop_back();
-        return u;
-    }*/
+
 
     void removeDeadUnits() {
         std::erase_if(units, [](const auto& u) { return !u->isAlive(); });
@@ -346,15 +335,7 @@ public:
         return units;
     }
 
-    // Cerință Tema 2: dynamic_cast pentru a găsi și inspira eroii
-    /*
-    void inspireHeroes() {
-        for (auto& u : units) {
-            if (auto* hero = dynamic_cast<Hero*>(u.get())) {
-                hero->inspire();
-            }
-        }
-    }*/
+    
 
     [[nodiscard]] int calculateTotalUpkeep() const {
         int total = 0;
@@ -582,11 +563,7 @@ public:
         return u;
     }
 
-    // void clearGarrison() {
-    //     garrison.clear();
-    // }
 
-    // --- GETTERI ---
 
     [[nodiscard]] std::string getName() const {
         // Extragem doar numărul din "Cetate Inamica 1" sau "Cetate Inamica 2"
