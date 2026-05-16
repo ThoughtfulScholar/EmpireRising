@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <raylib-cpp.hpp>
 
+
 // ==========================================================
 // 1. ENUMS ȘI CONSTANTE GLOBALE
 // ==========================================================
@@ -92,35 +93,7 @@ namespace GameEngine {
 
 // Inițializare atribut static
 int GameEngine::Logger::totalLogEntries = 0;
-// ==========================================================
-// 4. ABILITY (Compunere - Cerință Tema 1)
-// ==========================================================
-/*
-class Ability {
-private:
-    std::string name;
-    float activationChance;
-    int bonusDamage;
 
-public:
-    explicit Ability(std::string n = "Atac Standard", float chance = 0.0f, int bonus = 0)
-        : name(std::move(n)), activationChance(chance), bonusDamage(bonus) {}
-
-    [[nodiscard]] int trigger() const {
-        if (GameEngine::RandomGen::GetFloat(0.0f, 1.0f) <= activationChance) return bonusDamage;
-        return 0;
-    }
-
-    [[nodiscard]] const std::string& getName() const { return name; }
-};
-*/
-
-// ==========================================================
-// 5. UNIT (Clasă de Bază Polimorfică - Cerințe Tema 2)
-// ==========================================================
-// ==========================================================
-// CLASA UNIT - BAZA POLIMORFISMULUI (PARTEA 1)
-// ==========================================================
 class Unit {
 protected:
     std::string name;
@@ -488,10 +461,7 @@ public:
 // ==========================================================
 // CLASA CITY - REPARATA PENTRU LOGGER SI ECONOMIE
 // ==========================================================
-#include <vector>
-#include <memory>
-#include <string>
-#include <map>
+
 
 class City {
 private:
@@ -875,18 +845,7 @@ public:
     [[nodiscard]] const ArmyManager& getArmy() const { return army; }
     [[nodiscard]] std::pair<int, int> getPos() const { return {posX, posY}; }
 };
-/*
-class Enemy {
-private:
-    int x, y;
-    //int strength;
-public:
-    Enemy(int x, int y, int strength) : x(x), y(y), strength(strength) {}
-    int getX() const { return x; }
-    int getY() const { return y; }
-    //int getStrength() const { return strength; }
-};
-*/
+
 class GarrisonUnit : public Unit {
 public:
     GarrisonUnit() : Unit("Garnizoana", 200, 30, 10) {} // Nume, HP, Atac, Upkeep mic
@@ -957,18 +916,7 @@ private:
         }
         return upkeep;
     }
-    /*
-    template <typename T>
-        int findUnitIndexByType(const std::vector<std::unique_ptr<Unit>>& units) {
-            for (int i = 0; i < (int)units.size(); ++i) {
-                if (dynamic_cast<T*>(units[i].get())) return i;
-            }
-            return -1;
-        }*/
-
-    // [[nodiscard]] int getNetGold() const {
-    //     return calculateTotalIncome() - calculateTotalUpkeep();
-    // }
+    
 
     // --- INIȚIALIZARE LUME (Drumuri Garantate) ---
     void initWorld() {
@@ -1005,19 +953,6 @@ private:
         }
     }
 
-    // --- VERIFICARE STARE JOC ---
-    // void checkGameStatus() {
-    //     bool allCaptured = std::all_of(regions.begin(), regions.end(), [](const Zone& z) {
-    //         return z.getCity().isOccupied();
-    //     });
-    //
-    //     bool noCitiesLeft = std::none_of(regions.begin(), regions.end(), [](const Zone& z) {
-    //         return z.getCity().isOccupied();
-    //     });
-    //
-    //     if (allCaptured) currentState = GameState::VICTORIE;
-    //     else if (noCitiesLeft || clock.getDay() >= MAX_DAYS) currentState = GameState::DEFEAT;
-    // }
 
     void processNextDay() {
         if (gameOver) return;
@@ -1133,85 +1068,7 @@ private:
             logger.add("INFRANGERE: Timpul a expirat. Campania a esuat.");
         }
     }
-    // --- LOGICA DE RECRUTARE (Meniul R) ---
-    // void handleRecruitment() {
-    //     if (!showRecruitment) return; // Dacă meniul nu e vizibil, nu recrutăm
-    //
-    //     int typeToRecruit = -1;
-    //     if (IsKeyPressed(KEY_ONE)) typeToRecruit = (int)UnitType::INFANTERIE;
-    //     if (IsKeyPressed(KEY_TWO)) typeToRecruit = (int)UnitType::ARCASI;
-    //     if (IsKeyPressed(KEY_THREE)) typeToRecruit = (int)UnitType::CAVALERIE;
-    //     if (IsKeyPressed(KEY_FOUR)) typeToRecruit = (int)UnitType::GARDA;
-    //
-    //     if (typeToRecruit != -1) {
-    //         UnitType t = static_cast<UnitType>(typeToRecruit);
-    //         auto stats = GameData[t];
-    //         try {
-    //             int limit = player.getUnitLimit(regions);
-    //             player.recruit(UnitFactory::CreateUnit(t, "Soldat"), stats.cost, limit);
-    //             logger.add("Recrutat: Soldat (" + std::to_string(stats.cost) + " aur)");
-    //         } catch (const EmpireException& e) {
-    //             logger.logError(e);
-    //         }
-    //     }
-    // }
-
-    // void tryRecruit(UnitType type, const std::string& name, int cost) {
-    //     try {
-    //         int limit = player.getUnitLimit(regions);
-    //         player.recruit(UnitFactory::CreateUnit(type, name), cost, limit);
-    //         logger.add("Recrutare reusita: " + name);
-    //     } catch (const EmpireException& e) { logger.logError(e); }
-    // }
-
-    // --- LOGICA DE LUPTĂ ---
-/*
-    void handleCombat() {
-        auto [px, py] = player.getPos();
-
-        // Căutăm dacă suntem pe același tile cu un inamic roaming
-        auto it = std::find_if(roamingEnemies.begin(), roamingEnemies.end(), [&](const EnemyArmy& e) {
-            return e.getX() == px && e.getY() == py;
-        });
-
-        if (it != roamingEnemies.end()) {
-            try {
-                if (player.getArmy().isEmpty()) throw CombatException("Nu ai trupe pentru lupta!");
-
-                // Calculăm puterea totală a jucătorului
-                int playerAtk = 0;
-                for(const auto& u : player.getArmy().getUnits()) playerAtk += u->calculateTotalAttack();
-
-                // Schimb de damage
-                int enemyAtk = it->getAtk();
-                it->takeDamage(playerAtk);
-
-                // Inamicul ripostează dacă mai are viață
-                if (!it->isDefeated()) {
-                    // Aplicăm damage-ul unității din față a jucătorului
-                    player.getArmy().getFrontUnit()->takeDamage(enemyAtk);
-                    player.getArmy().removeDeadUnits();
-                    logger.add(TextFormat("Lupta crancena! Ai dat %i dmg, ai primit %i.", playerAtk, enemyAtk));
-                } else {
-                    player.earnGold(300); // Pradă de război
-                    logger.add("Victorie! Inamicul a fost nimicit pe campul de lupta.");
-                }
-                it->updateStats(); // Recalculăm HP/ATK inamic după pierderi
-            } catch (const EmpireException& e) { logger.logError(e); }
-            return;
-        }
-
-        // Restul logicii de asediu oraș (rămâne neschimbată)
-        auto& sel = regions[activeRegionIdx];
-        auto [cx, cy] = sel.getCity().getPos();
-        if (px == cx && py == cy) {
-            try {
-                std::string result = sel.executeBattleRound(player.getArmy());
-                logger.add(result);
-            } catch (const EmpireException& e) { logger.logError(e); }
-        }
-    }*/
-
+    
     void handleInput() {
         // 1. GESTIONARE MENIURI ACTIVE (R, G, T)
         if (showRecruitment || showGarrisonMenu || showTakeMenu) {
