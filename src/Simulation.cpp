@@ -213,7 +213,7 @@ void Simulation::processTurn() {
     
     try {
         player.spendGold(totalExpenses);
-    } catch (const GoldException& e) {
+    } catch (const GoldException&) { // Am șters variabila 'e' care nu era folosită
         logger.add("!! FALIMENT: Nu ai avut bani de solde. Armata personala a dezertat!");
         player.getArmy().clear();
     }
