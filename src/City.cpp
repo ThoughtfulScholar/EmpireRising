@@ -58,12 +58,12 @@ int City::getCityLevel() const { return level; }
 bool City::isOccupied() const { return occupied; }
 void City::setOccupied(bool state) { occupied = state; }
 
-const std::vector<std::unique_ptr<Unit>>& City::getGarrison() const {
-    return garrison.getUnits();
+const ArmyManager& City::getGarrison() const {
+    return garrison;
 }
 
-std::vector<std::unique_ptr<Unit>>& City::getGarrison() {
-    return garrison.getUnits();
+ArmyManager& City::getGarrison() {
+    return garrison;
 }
 
 std::map<std::string, int> City::getGarrisonCounts() const {

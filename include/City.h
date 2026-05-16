@@ -41,8 +41,8 @@ public:
     void setOccupied(bool state);
 
     // Acces direct la containerele de garnizoană
-    const std::vector<std::unique_ptr<Unit>>& getGarrison() const;
-    std::vector<std::unique_ptr<Unit>>& getGarrison();
+    const ArmyManager& getGarrison() const;
+    ArmyManager& getGarrison();
     [[nodiscard]] std::map<std::string, int> getGarrisonCounts() const;
 };
 
