@@ -169,7 +169,8 @@ void Simulation::processTurn() {
             if (ex == px && ey == py) {
                 logger.add("!! ATAC: Ai fost interceptat de armata mobila din factiunea: " + enemy.getFactionName());
                 // Luptă directă pe loc folosind prima provincie ca arbitru tactic
-                provinces[0].resolveBattle(player.getArmy(), const_cast<City&>(City("Camp deschis", px, py)), logger);
+                City dummyCity("Camp deschis", px, py);
+                provinces[0].resolveBattle(player.getArmy(), dummyCity, logger);
                 enemy.getArmy().clear(); // Forța inamică e distrusă după luptă
             }
         }
