@@ -101,7 +101,7 @@ void Simulation::initWorld() {
 
     // Plasare marcaje vizuale pentru cetăți pe matricea hărții
     for (auto& p : provinces) {
-        for (auto& city : p.getCities()) {
+        for (const auto& city : p.getCities()) {
             auto [cx, cy] = city.getPos();
             worldMap.setTile(cx, cy, TerrainType::CITY_TILE);
             worldMap.createPath(0, 0, cx, cy); // Asigură drum liber practicabil
@@ -207,11 +207,12 @@ void Simulation::processTurn() {
     }
 
     int playerArmyUpkeep = player.getArmy().calculateTotalUpkeep();
-    int totalExpenses = playerArmyUpkeep + totalGarrisonUpkeep;
+    // int totalExpenses = playerArmyUpkeep + totalGarrisonUpkeep;
 
     player.addGold(totalTaxCollected);
     
     try {
+        int totalExpenses = playerArmyUpkeep + totalGarrisonUpkeep;
         player.spendGold(totalExpenses);
     } catch (const GoldException&) { // Am șters variabila 'e' care nu era folosită
         logger.add("!! FALIMENT: Nu ai avut bani de solde. Armata personala a dezertat!");

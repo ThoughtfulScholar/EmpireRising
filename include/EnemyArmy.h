@@ -24,7 +24,7 @@ public:
 
     // Getteri
     [[nodiscard]] std::pair<int, int> getPos() const;
-    [[nodiscard]] std::string getFactionName() const;
+    [[nodiscard]] std::string& getFactionName() const;
     
     // Acces la armata proprie
     const ArmyManager& getArmy() const;

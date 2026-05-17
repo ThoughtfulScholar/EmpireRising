@@ -21,7 +21,8 @@ public:
     bool resolveBattle(ArmyManager& playerArmy, City& targetCity, GameEngine::Logger& logger);
 
     // Getteri
-    [[nodiscard]] std::string getName() const;
+    // [[nodiscard]] std::string getName() const;
+    [[nodiscard]] const std::string& getName() const;
     const std::vector<City>& getCities() const;
     std::vector<City>& getCities();
 };
