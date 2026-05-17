@@ -1,30 +1,35 @@
 #ifndef ZONE_H
 #define ZONE_H
 
+#include <string>
+#include <iostream>
+#include <utility>
+#include <raylib-cpp.hpp>
 #include "City.h"
 #include "ArmyManager.h"
+#include "UnitFactory.h"
 #include "StaticUtils.h"
-#include <string>
-#include <vector>
 
 class Zone {
 private:
     std::string zoneName;
-    std::vector<City> cities;
+    City localCity;
+    ArmyManager enemyGarrison; // Inamicii care păzesc orașul înainte de cucerire
+    raylib::Color mapTint;
 
 public:
-    explicit Zone(std::string name);
+    Zone(std::string name, City city, raylib::Color tint);
 
-    void addCity(const City& c);
-    
-    // Motorul de luptă turn-based între armata jucătorului și garnizoana unei cetăți
-    bool resolveBattle(ArmyManager& playerArmy, City& targetCity, GameEngine::Logger& logger);
+    [[nodiscard]] std::string executeBattleRound(ArmyManager& playerArmy);
 
-    // Getteri
-    // [[nodiscard]] std::string getName() const;
-    [[nodiscard]] const std::string& getName() const;
-    const std::vector<City>& getCities() const;
-    std::vector<City>& getCities();
+    // Getters inline
+    [[nodiscard]] const std::string& getName() const { return zoneName; }
+    [[nodiscard]] City& getCity() { return localCity; }
+    [[nodiscard]] const City& getCity() const { return localCity; }
+    [[nodiscard]] ArmyManager& getEnemyGarrison() { return enemyGarrison; }
+
+    // Operator friend declarer
+    friend std::ostream& operator<<(std::ostream& os, const Zone& z);
 };
 
 #endif // ZONE_H

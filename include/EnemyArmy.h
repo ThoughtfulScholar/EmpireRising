@@ -2,32 +2,31 @@
 #define ENEMYARMY_H
 
 #include "ArmyManager.h"
-#include <utility>
-#include <string>
+#include "WorldMap.h"
+#include "UnitFactory.h"
 
 class EnemyArmy {
 private:
-    int posX;
-    int posY;
-    std::string factionName;
-    ArmyManager army;
+    int posX, posY;
+    ArmyManager troops;
+    int totalHP;
+    int totalAtk;
 
 public:
-    EnemyArmy(int x, int y, std::string faction);
+    EnemyArmy(int x, int y, int difficulty);
 
-    // AI de mișcare autonomă bazat pe distanța geometrică până la jucător
-    void updateAI(int playerX, int playerY);
+    void updateStats();
+    void moveTowards(int targetX, int targetY, const WorldMap& wm);
+    void takeDamage(int dmg);
+    void draw(int offX, int offY) const;
 
-    // Gestiune trupe inamice
-    void addUnit(std::unique_ptr<Unit> u);
-    [[nodiscard]] bool isDefeated() const;
-
-    // Getteri
-    [[nodiscard]] std::pair<int, int> getPos() const;
-    [[nodiscard]] const std::string& getFactionName() const;    
-    // Acces la armata proprie
-    const ArmyManager& getArmy() const;
-    ArmyManager& getArmy();
+    // Getteri inline
+    int getX() const { return posX; }
+    int getY() const { return posY; }
+    int getHP() const { return totalHP; }
+    int getAtk() const { return totalAtk; }
+    bool isDefeated() const { return troops.isEmpty() || totalHP <= 0; }
+    ArmyManager& getTroops() { return troops; }
 };
 
 #endif // ENEMYARMY_H

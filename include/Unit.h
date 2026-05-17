@@ -1,97 +1,94 @@
 #ifndef UNIT_H
 #define UNIT_H
 
-#include "Enums.h"
-#include <string>
 #include <iostream>
+#include <string>
 #include <memory>
+#include <utility>
 
-// Clasa de bază polimorfică pentru toate unitățile militare
 class Unit {
 protected:
     std::string name;
-    int baseAtk;
-    int maxHP;
-    int currentHP;
+    int hp;
+    int maxHp;
+    int atk;
     int upkeepCost;
+    int level;
+    int xp;
 
-    // Contor static cerut pentru monitorizarea obiectelor din memorie
-    static int totalUnitsCount;
+    static int totalUnitsCreated;
 
-    // Metode virtuale protejate pentru implementarea modelului NVI
+    // --- 1. IMPLEMENTĂRI VIRTUALE PROTEJATE (Cerință Tema 2) ---
+    [[nodiscard]] virtual int calculateTotalAttackImpl() const;
     virtual void print(std::ostream& os) const;
-    [[nodiscard]] virtual int getEffectiveAttack() const = 0;
 
 public:
-    Unit(std::string uname, int uatk, int uhp, int uupkeep);
-    virtual ~Unit();
+    Unit(std::string n, int h, int a, int u);
+    virtual ~Unit() = default;
 
-    // Interfața Non-Virtuală (NVI)
+    // Rule of Three: Copy Constructor
+    Unit(const Unit& other);
+
+    // Rule of Three: Copy Assignment
+    Unit& operator=(const Unit& other);
+
+    virtual std::unique_ptr<Unit> clone() const = 0;
+
+    // --- 2. INTERFAȚA NON-VIRTUALĂ (NVI) ---
     [[nodiscard]] int calculateTotalAttack() const;
     void display(std::ostream& os) const;
 
-    // Mecanismul de clonare polimorfică (Virtual Copy Constructor)
-    [[nodiscard]] virtual std::unique_ptr<Unit> clone() const = 0;
+    // --- LOGICA DE LUPTA ---
+    virtual void takeDamage(int rawDamage);
+    [[nodiscard]] bool isAlive() const;
+    static void playAttackSound() {}
 
-    void takeDamage(int amount);
-    [[nodiscard]] bool isDead() const;
+    void gainXP(int amount);
 
-    // Getteri
-    [[nodiscard]] std::string getName() const;
+    // --- GETTERI ---
+    [[nodiscard]] const std::string& getName() const;
     [[nodiscard]] int getHP() const;
+    [[nodiscard]] int getAtk() const;
     [[nodiscard]] int getUpkeep() const;
 
     static int getTotalUnits();
 
-    // Supraîncărcarea operatorului de afișare
+    // --- 3. OPERATORI ---
     friend std::ostream& operator<<(std::ostream& os, const Unit& u);
 };
 
-// --- CLASE DERIVATE SPECIFICE ---
+// ==========================================================
+// 6. CLASE DERIVATE (Ierarhie Polimorfică - Tema 2)
+// ==========================================================
 
 class Infantry : public Unit {
-protected:
-    void print(std::ostream& os) const override;
-    [[nodiscard]] int getEffectiveAttack() const override;
 public:
-    Infantry(std::string uname, int uatk, int uhp, int uupkeep);
-    [[nodiscard]] std::unique_ptr<Unit> clone() const override;
+    Infantry() : Unit("Infanterie", 300, 45, 25) {}
+    std::unique_ptr<Unit> clone() const override { return std::make_unique<Infantry>(*this); }
 };
 
 class Archer : public Unit {
-protected:
-    void print(std::ostream& os) const override;
-    [[nodiscard]] int getEffectiveAttack() const override;
 public:
-    Archer(std::string uname, int uatk, int uhp, int uupkeep);
-    [[nodiscard]] std::unique_ptr<Unit> clone() const override;
+    Archer() : Unit("Arcas", 180, 70, 30) {}
+    std::unique_ptr<Unit> clone() const override { return std::make_unique<Archer>(*this); }
 };
 
 class Cavalry : public Unit {
-protected:
-    void print(std::ostream& os) const override;
-    [[nodiscard]] int getEffectiveAttack() const override;
 public:
-    Cavalry(std::string uname, int uatk, int uhp, int uupkeep);
-    [[nodiscard]] std::unique_ptr<Unit> clone() const override;
+    Cavalry() : Unit("Cavalerie", 350, 60, 50) {}
+    std::unique_ptr<Unit> clone() const override { return std::make_unique<Cavalry>(*this); }
 };
 
 class GarrisonGuard : public Unit {
-protected:
-    void print(std::ostream& os) const override;
-    [[nodiscard]] int getEffectiveAttack() const override;
 public:
-    GarrisonGuard(std::string uname, int uatk, int uhp, int uupkeep);
-    [[nodiscard]] std::unique_ptr<Unit> clone() const override;
+    explicit GarrisonGuard(const std::string& n) : Unit(n, 250, 40, 15) {}
+    std::unique_ptr<Unit> clone() const override { return std::make_unique<GarrisonGuard>(*this); }
 };
 
 class Hero : public Unit {
-protected:
-    void print(std::ostream& os) const override;
-    [[nodiscard]] int getEffectiveAttack() const override;
 public:
-    Hero(std::string uname, int uatk, int uhp, int uupkeep);
-    [[nodiscard]] std::unique_ptr<Unit> clone() const override;
+    Hero(const std::string& n, int h, int a, int u) : Unit(n, h, a, u) {}
+    std::unique_ptr<Unit> clone() const override { return std::make_unique<Hero>(*this); }
 };
 
 #endif // UNIT_H

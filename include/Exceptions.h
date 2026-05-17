@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 #include <string>
-
+/*
 // Clasa de bază pentru excepțiile imperiului
 class EmpireException : public std::runtime_error {
 public:
@@ -32,6 +32,30 @@ public:
 class CombatException : public EmpireException {
 public:
     explicit CombatException(const std::string& msg);
+};*/
+class EmpireException : public std::runtime_error {
+public:
+    explicit EmpireException(const std::string& msg);
+};
+
+class InsufficientGoldException : public EmpireException {
+public:
+    InsufficientGoldException();
+};
+
+class PopulationLimitException : public EmpireException {
+public:
+    explicit PopulationLimitException(const std::string& msg);
+};
+
+class CombatException : public EmpireException {
+public:
+    explicit CombatException(const std::string& msg);
+};
+
+class InvalidMovementException : public EmpireException {
+public:
+    explicit InvalidMovementException(const std::string& msg);
 };
 
 #endif // EXCEPTIONS_H
