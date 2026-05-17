@@ -1,28 +1,45 @@
-# EmpireRising
-**Empire Rising** este un simulator de strategie și gestiune dezvoltat în C++, ce pune bazele unui univers de cucerire și expansiune. Programul orchestrează interacțiunea dintre forța militară, stabilitatea economică și deciziile diplomatice într-un sistem dinamic bazat pe tururi.
+# ⚔️ Empire Rising — Simulation Engine
 
-### 🏛️ Pilonii Jocului:
+**Empire Rising** este un simulator tactic de strategie și management de imperiu bazat pe text, dezvoltat integral în **C++ modern (C++20)**. Programul orchestrează interacțiunea complexă dintre forța militară, stabilitatea economică și controlul teritorial într-o simulare dinamică ce evoluează zi de zi. Jucătorul trebuie să recruteze trupe din diverse categorii tactice, să gestioneze aurul imperiului, să exploreze o hartă bidimensională generată dinamic cu relief variat și să unifice regiunile prin asedii, în timp ce gestionează riscul permanent de revoltă al cetăților cucerite.
 
-* **Comandă Militară:** Gestionezi unități cu ierarhii de nivel, clase tactice și abilități speciale declanșate de probabilități pe câmpul de luptă.
-* **Sistem Economic:** Administrezi o piață de echipamente, fluxul de aur al imperiului și un tezaur securizat pentru obiectele de legendă.
-* **Lume Vie:** Confruntări influențate de teren, misiuni evolutive și relații diplomatice ce pendulează între alianțe strategice și război total.
-* **Evenimente Globale:** Fenomene aleatorii care apar neașteptat, forțând adaptarea strategiei la nivelul întregului imperiu.
+---
 
-**Empire Rising** nu este doar un cod, ci un motor de simulare unde deciziile administrative și victoriile pe câmpul de luptă clădesc drumul spre o hegemonie absolută.
+## 🏛️ Pilonii Jocului
 
-## Tema 1 - Detalii Implementare
+*   **Comandă Militară:** Gestionarea unei armate polimorfice cu ierarhii de nivel, clase tactice speciale și costuri zilnice de întreținere (*upkeep*).
+*   **Sistem Economic:** Administrarea fluxului de aur al imperiului, colectarea de taxe corelate cu stabilitatea provinciilor și riscuri de faliment.
+*   **Lume Vie:** O hartă de $30 \times 20$ generată pseudo-aleatoriu cu forme de relief (munți, păduri, ape, câmpii) și drumuri pavate dinamic care conectează cetățile.
+*   **Dinamică Teritorială:** Regiuni guvernate de facțiuni ce pot pendula între loialitate deplină și răzmerițe violente (sistem de rebeliune).
 
-- **Minim 3-4 clase cu compunere:** - `Zone` (compune `City` și `Garrison`)
-  - `Garrison` (compune `Unit`)
-  - `Unit` (compune `Ability`)
-- **Constructori de inițializare:** Toate clasele (ex: `Unit(name, type, ability)`)
-- **Rule of Three:** Implementată în clasa `Unit` (Constructor copiere, `operator=`, Destructor).
-- **Operator<<:** Implementat pentru toate clasele (`Unit`, `City`, `Zone`, etc.) pentru afișare recursivă.
-- **Funcții netriviale:**
-  - `Zone::executeBattleRound`: Logica de luptă și calcul daune.
-  - `City::upgrade`: Gestionare economie și upgrade-uri progresive.
-  - `Unit::gainXP`: Sistem de level-up.
-- **Const-corectitudine:** Folosit `const` și `[[nodiscard]]` peste tot unde starea nu se modifică.
+---
+
+## 🛠️ Detalii de Implementare Tehnică (Tema 1 & Tema 2)
+
+Proiectul a fost structurat după cele mai riguroase standarde ale Programării Orientate pe Obiecte, asigurând o decuplare curată prin separarea codului în module declarative (**fișiere `.h`**) și logica executabilă (**fișiere `.cpp`**).
+
+### 1. Moștenire, Polimorfism și Design Patterns (Tema 2)
+*   **Ierarhie Polimorfică Extinsă:** Clasa de bază abstractă `Unit` coordonează 5 clase derivate specializate: `Infantry`, `Archer`, `Cavalry`, `GarrisonGuard` și `Hero`. Fiecare clasă își calculează dinamic atacul și atributele.
+*   **Interfața Non-Virtuală (NVI):** Implementată riguros în sistemul de afișare. Operatorul `<<` apelează o metodă publică non-virtuală (`display`), care la rândul ei deleagă execuția către metoda protejată virtuală `print()`, garantând un flux de control sigur și extensibil.
+*   **Constructori Virtuali (`clone`):** Pentru a permite copierea sigură a obiectelor stocate polimorfic, s-a implementat metoda virtuală `std::unique_ptr<Unit> clone() const` în întreaga ierarhie de trupe.
+*   **Downcasting Securizat (`dynamic_cast`):** Filtrarea și identificarea trupelor în cadrul algoritmilor STL se realizează prin `dynamic_cast` aplicat pe pointerii bruți extrași din smart pointeri (`u.get()`), asigurând execuția de logică specifică fiecărei subclase.
+
+### 2. Gestiunea Memoriei și Regula celor 5 (Tema 1 & 2)
+*   **Smart Pointers:** Excluderea totală a pointerilor simpli (`raw pointers`) în favoarea `std::unique_ptr` și `std::make_unique` pentru eliminarea completă a scurgerilor de memorie (*memory leaks*).
+*   **Idiomul Copy-and-Swap (Rule of 5):** Clasa `ArmyManager` încapsulează un vector polimorfic și gestionează ciclul de viață al resurselor prin definirea explicită a *Constructorului de copiere* (bazat pe clonare), *Move Constructor*, *Move Assignment*, *Destructor* și a unui operator de atribuire robust ce utilizează o funcție de `swap` optimizată ADL.
+
+### 3. Ierarhie Proprie de Excepții (Tema 2)
+Controlul fluxului și prevenirea stărilor invalide în runtime se realizează printr-o ierarhie dedicată de excepții, derivată din `std::runtime_error`:
+*   `InsufficientGoldException` – Declanșată la tentative de recrutare sau upgrade-uri fără fonduri.
+*   `PopulationLimitException` – Aruncată când se atinge capacitatea maximă a unei garnizoane.
+*   `CombatException` – Gestionează anomaliile survenite în timpul simulării bătăliilor.
+*   `InvalidMovementException` – Previne mutările ilegale pe hartă sau pe tipuri de relief impracticabile.
+
+### 4. Compunerea Claselor și Utilizarea STL Modern (Tema 1)
+*   **Arhitectură prin Compunere:** Clasa principală `Simulation` coordonează întregul motor prin compunerea claselor de sine stătătoare: `WorldMap`, `Player`, `WorldClock` și `Logger`. Totodată, o `Zone` compune un obiect `City` și un `ArmyManager`.
+*   **Containere și Algoritmi:** Utilizarea extensivă a containerelor `std::vector` și `std::map`. Căutările și filtrările de trupe folosesc algoritmul modern `std::find_if` cu predicate Lambda, iar curățarea unităților eliminate se face eficient via `std::erase_if` (C++20).
+*   **Mecanisme Statice:** Urmărirea statisticilor globale se face prin atribute și metode `static` (ex: contorul global de unități create, jurnalul de loguri, generatorul de numere aleatoare `RandomGen`).
+*   **Const-Corectitudine:** Folosirea strictă a modificatorului `const` pentru metodele inspectoare și a atributului `[[nodiscard]]` pentru a asigura un cod predictibil și optimizat la compilare.
+
 
 ### Folosiți template-ul corespunzător grupei voastre!
 
