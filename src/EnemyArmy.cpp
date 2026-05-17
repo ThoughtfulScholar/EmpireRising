@@ -34,7 +34,9 @@ bool EnemyArmy::isDefeated() const {
 }
 
 std::pair<int, int> EnemyArmy::getPos() const { return {posX, posY}; }
-std::string EnemyArmy::getFactionName() const { return factionName; }
+const std::string& EnemyArmy::getFactionName() const { 
+    return factionName; 
+}
 
 const ArmyManager& EnemyArmy::getArmy() const { return army; }
 ArmyManager& EnemyArmy::getArmy() { return army; }
