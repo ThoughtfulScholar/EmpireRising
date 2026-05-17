@@ -72,7 +72,17 @@ add_executable(${MAIN_EXECUTABLE_NAME}
 )
 target_sources(${MAIN_EXECUTABLE_NAME}
     PRIVATE
-        src/Example.cpp
+        src/Exceptions.cpp
+        src/StaticUtils.cpp
+        src/Unit.cpp
+        src/UnitFactory.cpp
+        src/ArmyManager.cpp
+        src/Terrain.cpp
+        src/City.cpp
+        src/Zone.cpp
+        src/Player.cpp
+        src/EnemyArmy.cpp
+        src/Simulation.cpp
 )
 
 # NOTE: Add all defined targets (e.g. executables, libraries, etc. )
