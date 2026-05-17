@@ -56,6 +56,6 @@ bool Zone::resolveBattle(ArmyManager& playerArmy, City& targetCity, GameEngine::
     }
 }
 
-std::string Zone::getName() const { return zoneName; }
+const std::string& Zone::getName() const { return zoneName; }
 const std::vector<City>& Zone::getCities() const { return cities; }
 std::vector<City>& Zone::getCities() { return cities; }
