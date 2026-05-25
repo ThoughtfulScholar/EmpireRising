@@ -39,10 +39,8 @@ void RunRequirementsDemo() {
 }
 
 int main() {
-    // Rulam demo-ul obligatoriu pentru cerinte in consola
     RunRequirementsDemo();
 
-    // Pornim simularea grafica propriu-zisa
     try {
         Simulation game;
         game.run();
