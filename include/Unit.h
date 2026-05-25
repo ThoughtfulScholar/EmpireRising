@@ -18,9 +18,8 @@ protected:
 
     static int totalUnitsCreated;
 
-    // --- 1. IMPLEMENTĂRI VIRTUALE PROTEJATE (Cerință Tema 2) ---
-    [[nodiscard]] virtual int calculateTotalAttackImpl() const = 0; // Transformăm în virtual pur
-    virtual void print(std::ostream& os) const = 0;               // Transformăm în virtual pur
+    [[nodiscard]] virtual int calculateTotalAttackImpl() const = 0; 
+    virtual void print(std::ostream& os) const = 0;               
 
 public:
     Unit(std::string n, int h, int a, int u);
