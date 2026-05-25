@@ -31,12 +31,10 @@ Unit& Unit::operator=(const Unit& other) {
 
 // --- INTERFAȚA NON-VIRTUALĂ (NVI) ---
 int Unit::calculateTotalAttack() const {
-    // Apel polimorfic către implementarea clasei derivate active
     return calculateTotalAttackImpl();
 }
 
 void Unit::display(std::ostream& os) const {
-    // Apel polimorfic către print-ul clasei derivate active
     print(os);
 }
 
@@ -80,7 +78,7 @@ std::ostream& operator<<(std::ostream& os, const Unit& u) {
 
 // --- INFANTERIE ---
 int Infantry::calculateTotalAttackImpl() const {
-    return atk + (level * 5); // Atac standard stabilizat
+    return atk + (level * 5);
 }
 void Infantry::print(std::ostream& os) const {
     os << "[Infanterie] " << name << " Lvl " << level << " | HP: " << hp << "/" << maxHp << " | ATK: " << calculateTotalAttack();
@@ -88,7 +86,7 @@ void Infantry::print(std::ostream& os) const {
 
 // --- ARCAȘ ---
 int Archer::calculateTotalAttackImpl() const {
-    return atk + (level * 7); // Arcașii scalează mai bine la atac per nivel
+    return atk + (level * 7);
 }
 void Archer::print(std::ostream& os) const {
     os << "[Arcas] " << name << " Lvl " << level << " | HP: " << hp << "/" << maxHp << " | ATK: " << calculateTotalAttack();
@@ -96,7 +94,6 @@ void Archer::print(std::ostream& os) const {
 
 // --- CAVALERIE ---
 int Cavalry::calculateTotalAttackImpl() const {
-    // Cavaleria primește un bonus de șarjă de 20% din atacul de bază
     return static_cast<int>(atk * 1.2) + (level * 6);
 }
 void Cavalry::print(std::ostream& os) const {
@@ -105,7 +102,7 @@ void Cavalry::print(std::ostream& os) const {
 
 // --- GARDĂ GARNIZOANĂ ---
 int GarrisonGuard::calculateTotalAttackImpl() const {
-    return atk + (level * 4) + 15; // Are un bonus defensiv fix de atac direct incorporat
+    return atk + (level * 4) + 15; 
 }
 void GarrisonGuard::print(std::ostream& os) const {
     os << "[Garda] " << name << " Lvl " << level << " | HP: " << hp << "/" << maxHp << " | ATK: " << calculateTotalAttack();
@@ -113,7 +110,6 @@ void GarrisonGuard::print(std::ostream& os) const {
 
 // --- EROU ---
 int Hero::calculateTotalAttackImpl() const {
-    // Mecanică specială: Dacă eroul are sub jumătate din HP, intră în Berserk (atac mărit cu 50%)
     if (hp < (maxHp / 2)) {
         return static_cast<int>((atk + (level * 10)) * 1.5);
     }
