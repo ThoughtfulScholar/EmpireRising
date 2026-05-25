@@ -1,6 +1,6 @@
 #include "../include/City.h"
-#include <raylib.h> // Pentru GetRandomValue utilizat în logica din .h, adăugat preventiv aici
-#include <cctype>   // Pentru isdigit
+#include <raylib.h>
+#include <cctype>
 
 // Constructor principal
 City::City(std::string n, int x, int y, int pop)
@@ -45,7 +45,6 @@ void City::growPopulation() {
 // --- ECONOMIE (TAXE ȘI SALARII) ---
 int City::collectTaxes() const {
     if (!occupied) return 0;
-    // Taxe mult mai mari conform cerinței (Populația / 2 * Nivel)
     return (population / 2) * cityLevel;
 }
 
@@ -73,8 +72,6 @@ std::unique_ptr<Unit> City::extractUnit() {
 }
 
 std::string City::getName() const {
-    // Extragem doar numărul din "Cetate Inamica 1" sau "Cetate Inamica 2"
-    // Căutăm ultima cifră din string-ul 'name'
     std::string idOnly = "";
     for (char c : this->name) {
         if (isdigit(c)) {
