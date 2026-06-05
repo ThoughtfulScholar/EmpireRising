@@ -44,10 +44,27 @@ int main() {
     try {
         Simulation game;
         game.run();
+        // =================================================================
+        // APELAREA EFECTIVĂ A METODEI getHistory() - SALVARE DE LA ȘTERGERE
+        // =================================================================
+        std::cout << "RAPORTUL FINAL AL IMPERIULUI (Sesiunea de Joc) 🏛️\n";
+
+        // Extragem istoricul complet din Singleton utilizând funcția analizată
+        const auto& istoricJoc = GameLogger::getInstance().getHistory();
+
+        if (istoricJoc.empty()) {
+            std::cout << "Nu s-au inregistrat actiuni majore in aceasta sesiune.\n";
+        } else {
+            for (const auto& log : istoricJoc) {
+                std::cout << " > " << log << "\n";
+            }
+        }
+        std::cout << "==================================================\n";
     } catch (const std::exception& e) {
         std::cerr << "EROARE CRITICA: " << e.what() << std::endl;
         return 1;
     }
+
     
     return 0;
 }

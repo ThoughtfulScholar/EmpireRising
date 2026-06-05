@@ -22,9 +22,9 @@ public:
         items.push_back(std::move(item));
     }
 
-    const std::vector<T>& getItems() const { return items; }
-    size_t getSize() const { return items.size(); }
-    int getCapacity() const { return Capacity; }
+    //const std::vector<T>& getItems() const { return items; }
+    //size_t getSize() const { return items.size(); }
+    //int getCapacity() const { return Capacity; }
 };
 
 #endif // RESOURCEMANAGER_H
