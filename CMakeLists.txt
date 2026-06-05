@@ -93,6 +93,9 @@ add_executable(${MAIN_EXECUTABLE_NAME}
         include/EnemyArmy.h
         src/Simulation.cpp
         include/Simulation.h
+        include/GameLogger.h
+        include/ResourceManager.h
+        include/TemplateUtils.h
 
 
 )

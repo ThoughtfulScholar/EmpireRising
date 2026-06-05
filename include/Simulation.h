@@ -17,6 +17,9 @@
 #include "EnemyArmy.h"
 #include "UnitFactory.h"
 #include "LoginUI.h"
+#include "TemplateUtils.h"
+#include "ResourceManager.h"
+#include "GameLogger.h"
 
 class Simulation {
 private:

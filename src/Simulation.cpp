@@ -272,6 +272,7 @@ void Simulation::handleInput() {
                 if (it != pUnits.end()) {
                     regions[activeRegionIdx].getCity().addUnitToGarrison(std::move(*it));
                     pUnits.erase(it);
+                    GameLogger::getInstance().logEvent("Transferat in oras: " + targetName);
                     logger.add("Transferat in oras: " + targetName);
                 } else {
                     logger.add("! Nu ai " + targetName + " in armata.");
@@ -291,9 +292,12 @@ void Simulation::handleInput() {
             if (keyHit) {
                 try {
                     int limit = player.getUnitLimit(regions);
+                    /*
                     if ((int)player.getArmy().getUnits().size() >= limit)
-                        throw PopulationLimitException("Armata mobila este plina!");
-
+                        throw PopulationLimitException("Armata mobila este plina!");*/
+                    if ((int)player.getArmy().getUnits().size() >= limit) {
+                        throw PopulationLimitException("Armata mobila este plina! Limita atinsa.");
+                    }
                     auto& gUnits = regions[activeRegionIdx].getCity().getGarrison();
                     std::string targetName = GameData[toTake].name;
 
@@ -309,6 +313,7 @@ void Simulation::handleInput() {
                     if (it != gUnits.end()) {
                         player.getArmy().addUnit(std::move(*it));
                         gUnits.erase(it);
+                        GameLogger::getInstance().logEvent("Recuperat din oras: " + targetName);
                         logger.add("Recuperat din oras: " + targetName);
                     } else {
                         logger.add("! In oras nu exista " + targetName);
@@ -325,11 +330,15 @@ void Simulation::handleInput() {
             else if (IsKeyPressed(KEY_FOUR)) typeIdx = (int)UnitType::GARDA;
             else if (IsKeyPressed(KEY_FIVE)) typeIdx = (int)UnitType::EROU;
             if (typeIdx != -1) {
+
                 UnitType t = static_cast<UnitType>(typeIdx);
                 try {
                     player.recruit(UnitFactory::CreateUnit(t, GameData[t].name), GameData[t].cost, player.getUnitLimit(regions));
+                    player.recruit(UnitFactory::CreateUnit(t, GameData[t].name), GameData[t].cost, player.getUnitLimit(regions));
+                    GameLogger::getInstance().logEvent("Recrutat cu succes: " + GameData[t].name);
                     logger.add("Recrutat: " + GameData[t].name);
                 } catch (const EmpireException& e) { logger.logError(e); }
+
             }
         }
         return;
@@ -381,7 +390,10 @@ void Simulation::handleInput() {
                     player.getArmy().getFrontUnit()->takeDamage(targetedEnemy->getAtk());
                     player.getArmy().removeDeadUnits();
                 } else {
-                    player.earnGold(250);
+                    //player.earnGold(250);
+                    int goldCastigat = applyStatBonus<int>(250, 0, 1000);
+                    player.earnGold(goldCastigat);
+                    GameLogger::getInstance().logEvent("Batalie castigata. Aur dobandit: " + std::to_string(goldCastigat));
                     logger.add("VICTORIE! Armata distrusa.");
                     targetedEnemy = nullptr;
                 }
@@ -432,7 +444,9 @@ void Simulation::handleInput() {
             if (c.getCityLevel() < 5) {
                 if (player.getGold() >= c.getUpgradeCost()) {
                     player.removeGold(c.getUpgradeCost());
+                    int urmatorulNivel = applyStatBonus<int>(c.getCityLevel(), 1, 5);
                     c.upgrade();
+                    GameLogger::getInstance().logEvent("Oras modernizat: " + c.getName() + " la Nivelul: " + std::to_string(urmatorulNivel));
                     logger.add("Modernizat: " + c.getName());
                 } else {
                     logger.add("Eroare: Aur insuficient!");
@@ -678,6 +692,8 @@ void Simulation::drawUI() {
 // Bucla principală
 void Simulation::run() {
     LoginUI login;
+    // Logăm pornirea cu succes a jocului prin Singleton
+    GameLogger::getInstance().logEvent("Motorul de joc Empire Rising a pornit cu succes.");
     while (!window.ShouldClose()) {
         if (currentState == GameState::LOGIN) {
             login.update();
